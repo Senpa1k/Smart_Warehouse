@@ -1,14 +1,13 @@
 package main
 
-import (
-	"log"
-	"smart_warehouse/backend/internal/config"
-)
+// type Env struct{
+
+// }
 
 func main() {
-	_, err := config.InitDB()
-	if err != nil {
-		log.Fatal("can not open db")
-	}
+	// db, err := config.InitDB()
+	// if err != nil {
+	// 	log.Fatal("can not open db")
+	// }
 
 }
