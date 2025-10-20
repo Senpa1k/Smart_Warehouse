@@ -2,7 +2,8 @@ package main
 
 import (
 	"log"
-	"smart_warehouse/backend/internal/config"
+
+	"github.com/Senpa1k/Smart_Warehouse/internal/config"
 )
 
 func main() {
