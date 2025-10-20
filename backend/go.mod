@@ -1,4 +1,4 @@
-module smart_warehouse/backend
+module github.com/Senpa1k/Smart_Warehouse
 
 go 1.22.2
 

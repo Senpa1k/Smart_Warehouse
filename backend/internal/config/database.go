@@ -3,14 +3,22 @@ package config
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+func getEnv(key string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return ""
+}
+
 func InitDB() (*gorm.DB, error) {
-	dsn := "host=localhost user=postgres password=postgres dbname=smart_warehouse port=5432 sslmode=disable"
+	dsn := getEnv("DATABASE_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -18,7 +26,6 @@ func InitDB() (*gorm.DB, error) {
 
 	log.Println("Database connection established")
 
-	// Пробуем миграции
 	err = db.AutoMigrate(
 		&models.Users{},
 		&models.Products{},
