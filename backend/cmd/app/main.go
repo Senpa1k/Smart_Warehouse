@@ -2,33 +2,25 @@ package main
 
 import (
 	"log"
-	"time"
 
-	"github.com/Senpa1k/Smart_Warehouse/internal/config"
-	"github.com/Senpa1k/Smart_Warehouse/internal/models"
+	"github.com/Senpa1k/Smart_Warehouse/internal/handler"
+	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/Senpa1k/Smart_Warehouse/internal/server"
+	"github.com/Senpa1k/Smart_Warehouse/internal/service"
 )
 
-// type Env struct{
-// 	Jwt_secret string   getenv()
-// }
-
 func main() {
-	db, err := config.InitDB()
+	db, err := repository.InitBD()
 	if err != nil {
-		log.Fatal("can not open db")
+		log.Fatal(err)
 	}
 
-	var user models.Users
-	var userp models.Users = models.Users{Name: "keru",
-		Email:        "new",
-		PasswordHash: "feq",
-		Role:         "admin"}
+	repos := repository.NewRepository(db)
+	services := service.NewService(repos)
+	handler := handler.NewHandler(services)
 
-	db.Create(&userp)
-	for {
-		time.Sleep(1 * time.Second)
-		db.First(&user, 1)
-		log.Println(user.Name)
+	srv := new(server.Server)
+	if err := srv.Run("8080", handler.InitRoutes()); err != nil {
+		log.Fatal("error in init server ", err)
 	}
-
 }
