@@ -1,6 +1,10 @@
 package entities
 
-import "time"
+import (
+	"time"
+
+	"github.com/Senpa1k/Smart_Warehouse/internal/models"
+)
 
 type RobotsData struct {
 	RobotId   string    `json:"robot_id" binding:"required"`
@@ -20,4 +24,15 @@ type ScanResults struct {
 	ProductName string `json:"product_name" binding:"required"`
 	Quantity    int    `json:"quantity" binding:"required"`
 	Status      string `json:"status" binding:"required"`
+}
+
+type DashInfo struct {
+	ListRobots []*models.Robots              `json:"robots"`
+	ListScans  [100]*models.InventoryHistory `json:"recent_scans"`
+	Statistics struct {
+		TotalCheck        int `json:"total_check"`
+		UniqueProducts    int `json:"unique_products"`
+		FindDiscrepancies int `json:"find _discrepancies"`
+		AverageTime       int `json:"average_time"`
+	} `json:"statistics"`
 }

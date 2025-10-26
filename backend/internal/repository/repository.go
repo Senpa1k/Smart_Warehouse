@@ -12,6 +12,7 @@ type Authorization interface {
 }
 
 type DashBoard interface {
+	GetInfo() (*entities.DashInfo, error)
 }
 
 type History interface {
@@ -22,6 +23,7 @@ type Inventory interface {
 
 type Robot interface {
 	AddData(entities.RobotsData) error
+	CheckId(string) bool
 }
 
 type Repository struct {
@@ -36,5 +38,6 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
 		Robot:         NewRobotPostges(db),
+		DashBoard:     NewDashBoardPostges(db),
 	}
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) robots(c *gin.Context) {
-	_, ok := c.Get(userCtx)
+	_, ok := c.Get(robotCtx)
 	if !ok {
 		NewResponseError(c, http.StatusInternalServerError, "robot id not found")
 		return
@@ -30,4 +30,14 @@ func (h *Handler) robots(c *gin.Context) {
 		"status":     "received",
 		"message_id": "tmp_message_id",
 	})
+}
+
+func (h *Handler) currentDashBoard(c *gin.Context) {
+	data, err := h.services.DashBoard.GetInfo()
+	if err != nil {
+		NewResponseError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, data)
 }

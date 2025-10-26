@@ -24,10 +24,14 @@ func (h *Handler) InitRoutes() *gin.Engine {
 			auth.POST("/login", h.login)
 		}
 
-		// robots := router.Group("/robots", h.userIdentity)
-		robots := api.Group("/robots")
+		robots := api.Group("/robots", h.robotIdentity)
 		{
 			robots.POST("/data", h.robots)
+		}
+
+		dashboard := api.Group("/dashboard", h.userIdentity)
+		{
+			dashboard.GET("/current", h.currentDashBoard)
 		}
 
 	}

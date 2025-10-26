@@ -59,3 +59,23 @@ type AiPrediction struct {
 
 	AIPredictionProduct Products `gorm:"foreignKey:ProductID;references:ID;" json:"product"`
 }
+
+func (InventoryHistory) TableName() string {
+	return "inventory_history"
+}
+
+func (Users) TableName() string {
+	return "users"
+}
+
+func (Products) TableName() string {
+	return "products"
+}
+
+func (Robots) TableName() string {
+	return "robots"
+}
+
+func (AiPrediction) TableName() string {
+	return "ai_predictions"
+}

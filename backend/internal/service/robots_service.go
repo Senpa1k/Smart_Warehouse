@@ -17,3 +17,7 @@ func (r *RobotService) AddData(data entities.RobotsData) error {
 	//проверка валидности данных
 	return r.repo.AddData(data)
 }
+
+func (r *RobotService) CheckId(robotID string) bool {
+	return r.repo.CheckId(robotID)
+}

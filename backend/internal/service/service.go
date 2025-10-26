@@ -13,6 +13,7 @@ type Authorization interface {
 }
 
 type DashBoard interface {
+	GetInfo() (*entities.DashInfo, error)
 }
 
 type History interface {
@@ -23,6 +24,7 @@ type Inventory interface {
 
 type Robot interface {
 	AddData(entities.RobotsData) error
+	CheckId(string) bool
 }
 
 type Service struct {
@@ -37,5 +39,6 @@ func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
 		Robot:         NewRobotService(repos.Robot),
+		DashBoard:     NewDashBoardService(repos.DashBoard),
 	}
 }
