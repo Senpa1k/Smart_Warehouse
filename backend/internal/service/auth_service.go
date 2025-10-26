@@ -2,6 +2,7 @@ package service
 
 import (
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,11 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
 	"github.com/dgrijalva/jwt-go"
 )
+
+type tokenClaims struct {
+	jwt.StandardClaims
+	UserId uint `json:"user_id"`
+}
 
 type AuthService struct {
 	repo repository.Authorization
@@ -34,28 +40,51 @@ func (s *AuthService) GetUser(email string, password string) (string, *models.Us
 
 	token := ""
 	if in.ID != 0 {
-		token = generateJWTToken()
+		token = generateJWTToken(in.ID)
 	}
 
 	return token, in, nil
+}
+
+func (s *AuthService) ParseToken(accessToken string) (uint, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		jwt_secret, _ := config.Get("jwt_secret") // jwt_secret будет доступен в контейнере
+
+		return []byte(jwt_secret), nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok {
+		return 0, errors.New("tocen claims are not in tokenClaims")
+	}
+
+	return claims.UserId, nil
 }
 
 func generateHashPassword(password string) string {
 	hash := sha1.New()
 	hash.Write([]byte(password))
 
-	salt, _ := config.Get("salt")
+	salt, _ := config.Get("salt") // соль будет доступна в контейнере
 
 	return fmt.Sprintf("%x", hash.Sum([]byte(salt)))
 }
 
-func generateJWTToken() string {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
-		IssuedAt:  time.Now().Unix(),
+func generateJWTToken(id uint) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &tokenClaims{
+		jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+			IssuedAt:  time.Now().Unix(),
+		},
+		id,
 	})
 
-	jwt_secret, _ := config.Get("jwt_secret")
+	jwt_secret, _ := config.Get("jwt_secret") // jwt_secret будет доступен в контейнере
 	str, _ := token.SignedString([]byte(jwt_secret))
 	return str
 }

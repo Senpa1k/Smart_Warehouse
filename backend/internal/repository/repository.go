@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"gorm.io/gorm"
 )
@@ -20,6 +21,7 @@ type Inventory interface {
 }
 
 type Robot interface {
+	AddData(entities.RobotsData) error
 }
 
 type Repository struct {
@@ -33,5 +35,6 @@ type Repository struct {
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
+		Robot:         NewRobotPostges(db),
 	}
 }
