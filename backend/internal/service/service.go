@@ -1,8 +1,13 @@
 package service
 
-import "github.com/Senpa1k/Smart_Warehouse/internal/repository"
+import (
+	"github.com/Senpa1k/Smart_Warehouse/internal/models"
+	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+)
 
 type Authorization interface {
+	CreateUser(models.Users) (uint, error)
+	GetUser(string, string) (string, *models.Users, error)
 }
 
 type DashBoard interface {
@@ -26,5 +31,7 @@ type Service struct {
 }
 
 func NewService(repos *repository.Repository) *Service {
-	return &Service{}
+	return &Service{
+		Authorization: NewAuthService(repos.Authorization),
+	}
 }

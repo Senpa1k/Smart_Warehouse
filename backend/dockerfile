@@ -8,6 +8,7 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/app
+RUN CGO_ENABLED=0 GOOS=linux go build -o migrator ./cmd/migrator
 
 FROM alpine:latest
 
@@ -15,6 +16,8 @@ RUN apk add --no-cache libc6-compat
 
 WORKDIR /root/
 COPY --from=builder /app/main .
+COPY --from=builder /app/migrator .
 COPY --from=builder /app/migrations ./migrations
 
-# CMD ["./main"]
+CMD ["./migrator"] # поравить, чтобы запускалось не каждый раз при запуске контейнера
+CMD ["./main"]

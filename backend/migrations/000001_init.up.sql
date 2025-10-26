@@ -52,4 +52,3 @@ CREATE TABLE ai_predictions (
 CREATE INDEX idx_inventory_scanned ON inventory_history(scanned_at DESC);
 CREATE INDEX idx_inventory_product ON inventory_history(product_id);
 CREATE INDEX idx_inventory_zone ON inventory_history(zone);
-

@@ -1,18 +1,19 @@
 package main
 
 import (
-	"log"
-
 	"github.com/Senpa1k/Smart_Warehouse/internal/handler"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
 	"github.com/Senpa1k/Smart_Warehouse/internal/server"
 	"github.com/Senpa1k/Smart_Warehouse/internal/service"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+
 	db, err := repository.InitBD()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatalf("fatal initializetion db, %s", err.Error())
 	}
 
 	repos := repository.NewRepository(db)
@@ -21,6 +22,6 @@ func main() {
 
 	srv := new(server.Server)
 	if err := srv.Run("8080", handler.InitRoutes()); err != nil {
-		log.Fatal("error in init server ", err)
+		logrus.Fatalf("error in init http server: %s", err.Error())
 	}
 }

@@ -1,8 +1,13 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"github.com/Senpa1k/Smart_Warehouse/internal/models"
+	"gorm.io/gorm"
+)
 
 type Authorization interface {
+	CreateUser(models.Users) (uint, error)
+	GetUser(string, string) (*models.Users, error)
 }
 
 type DashBoard interface {
@@ -25,6 +30,8 @@ type Repository struct {
 	DashBoard
 }
 
-func NewRepository(*gorm.DB) *Repository {
-	return &Repository{}
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{
+		Authorization: NewAuthPostgres(db),
+	}
 }

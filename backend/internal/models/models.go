@@ -6,8 +6,8 @@ import (
 
 type Users struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement;type:serial" json:"id"`
-	Email        string    `gorm:"unique;not null;type:varchar(255)" json:"email"`
-	PasswordHash string    `gorm:"not null;type:varchar(255)" json:"-"`
+	Email        string    `gorm:"unique;not null;type:varchar(255)" json:"email" binding:"required"`
+	PasswordHash string    `gorm:"not null;type:varchar(255)" json:"password" binding:"required"`
 	Name         string    `gorm:"not null;type:varchar(255)" json:"name"`
 	Role         string    `gorm:"size:50;not null" json:"role"` //isv_valid   --'operator', 'admin', 'viewer'
 	CreatedAt    time.Time `gorm:"type:timestamptz;default:now()" json:"created_at"`
