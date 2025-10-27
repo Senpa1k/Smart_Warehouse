@@ -14,10 +14,13 @@ type Authorization interface {
 type DashBoard interface {
 }
 
-type History interface {
-}
-
 type Inventory interface {
+	ImportInventoryHistories(histories []models.InventoryHistory) error
+	GetInventoryHistoryByProductIDs(productIDs []string) ([]models.InventoryHistory, error)
+	GetProductByID(productID string) error
+	CreateProduct(product *models.Products) error
+	UpdateProduct(product *models.Products) error
+	GetHistory(from, to, zone, status string, limit, offset int) ([]models.InventoryHistory, int64, error)
 }
 
 type Robot interface {
@@ -27,7 +30,6 @@ type Robot interface {
 type Repository struct {
 	Robot
 	Inventory
-	History
 	Authorization
 	DashBoard
 }
@@ -35,6 +37,7 @@ type Repository struct {
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
-		Robot:         NewRobotPostges(db),
+		Robot:         NewRobotPostgres(db),
+		Inventory:     NewInventoryRepo(db),
 	}
 }
