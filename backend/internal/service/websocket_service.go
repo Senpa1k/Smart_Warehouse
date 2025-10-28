@@ -88,7 +88,7 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 		if scanResult.Status != "OK" {
 			if satatus := r.repo.InventoryAlertScanned(&result2, scan.Timestamp, scanResult.ProductId); satatus == nil {
 				err := conn.WriteJSON(map[string]interface{}{
-					"type": "inventory_alter",
+					"type": "inventory_alert",
 					"data": result2,
 				})
 				if err != nil {
