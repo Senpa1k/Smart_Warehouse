@@ -26,7 +26,7 @@ func main() {
 
 	srv := new(server.Server)
 	go func() {
-		if err := srv.Run("3000", handler.InitRoutes()); err != nil {
+		if err := srv.Run("8080", handler.InitRoutes()); err != nil {
 			logrus.Fatalf("error in init http server: %s", err.Error())
 		}
 		done <- struct{}{}

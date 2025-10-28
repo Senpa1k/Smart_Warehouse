@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"gorm.io/gorm"
 )
@@ -43,21 +45,29 @@ func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset 
 	query := r.db.Model(&models.InventoryHistory{}).Preload("Robot").Preload("Product")
 
 	if from != "" {
-		query = query.Where("scanned_at >= ?", from)
+		filterTime, err := time.Parse("2006-01-02 15:04:05", from)
+		if err != nil {
+			return nil, 0, err
+		}
+		query = query.Where("scanned_at >= ?", filterTime)
 	}
+
 	if to != "" {
-		query = query.Where("scanned_at <= ?", to)
+		filterTime, err := time.Parse("2006-01-02 15:04:05", to)
+		if err != nil {
+			return nil, 0, err
+		}
+		query = query.Where("scanned_at <= ?", filterTime)
 	}
+
 	if zone != "" {
 		query = query.Where("zone = ?", zone)
 	}
+
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
 	err := query.Limit(limit).Offset(offset).Order("scanned_at DESC").Find(&histories).Error
 	return histories, total, err
 }
