@@ -5,7 +5,17 @@ import (
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // для разрабы
+	},
+	WriteBufferSize: 1024,
+	ReadBufferSize:  10,
+}
 
 func (h *Handler) robots(c *gin.Context) {
 	_, ok := c.Get(robotCtx)
@@ -32,12 +42,14 @@ func (h *Handler) robots(c *gin.Context) {
 	})
 }
 
-func (h *Handler) currentDashBoard(c *gin.Context) {
-	data, err := h.services.DashBoard.GetInfo()
+func (h *Handler) websocketDashBoard(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		NewResponseError(c, http.StatusInternalServerError, err.Error())
+		logrus.Error("upgrade error with socket")
 		return
 	}
+	defer conn.Close()
 
-	c.JSON(http.StatusOK, data)
+	h.services.WebsocketDashBoard.RunStream(conn)
+	logrus.Print("вебсокет закрыт")
 }

@@ -4,7 +4,10 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/gorilla/websocket"
 )
+
+var made = make(chan interface{}, 100) // до 100 запросов одновременно +- на время обработки запроса
 
 type Authorization interface {
 	CreateUser(models.Users) (uint, error)
@@ -12,8 +15,8 @@ type Authorization interface {
 	ParseToken(string) (uint, error)
 }
 
-type DashBoard interface {
-	GetInfo() (*entities.DashInfo, error)
+type WebsocketDashBoard interface {
+	RunStream(*websocket.Conn)
 }
 
 type History interface {
@@ -32,13 +35,13 @@ type Service struct {
 	Inventory
 	History
 	Authorization
-	DashBoard
+	WebsocketDashBoard
 }
 
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
-		Authorization: NewAuthService(repos.Authorization),
-		Robot:         NewRobotService(repos.Robot),
-		DashBoard:     NewDashBoardService(repos.DashBoard),
+		Authorization:      NewAuthService(repos.Authorization),
+		Robot:              NewRobotService(repos.Robot, made),
+		WebsocketDashBoard: NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
 	}
 }

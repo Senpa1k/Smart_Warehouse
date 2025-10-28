@@ -7,23 +7,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// func (h *Handler) singUp(c *gin.Context) { // not task
-// 	var input models.Users
+func (h *Handler) singUp(c *gin.Context) { // not task
+	var input models.Users
 
-// 	if err := c.BindJSON(&input); err != nil {
-// 		NewResponseError(c, http.StatusBadRequest, err.Error())
-// 		return
-// 	}
+	if err := c.BindJSON(&input); err != nil {
+		NewResponseError(c, http.StatusBadRequest, err.Error())
+		return
+	}
 
-// 	id, err := h.services.Authorization.CreateUser(input)
-// 	if err != nil {
-// 		NewResponseError(c, http.StatusInternalServerError, err.Error())
-// 		return
-// 	}
-// 	c.JSON(http.StatusOK, map[string]interface{}{
-// 		"id": id,
-// 	})
-// }
+	id, err := h.services.Authorization.CreateUser(input)
+	if err != nil {
+		NewResponseError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"id": id,
+	})
+}
 
 func (h *Handler) login(c *gin.Context) {
 	var input models.Users

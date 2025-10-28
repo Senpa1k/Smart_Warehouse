@@ -15,6 +15,7 @@ const (
 )
 
 func (h *Handler) userIdentity(c *gin.Context) {
+
 	header := c.GetHeader(authorizationHeader)
 	if header == "" {
 		NewResponseError(c, http.StatusUnauthorized, "empty auth header")
@@ -26,7 +27,6 @@ func (h *Handler) userIdentity(c *gin.Context) {
 		NewResponseError(c, http.StatusUnauthorized, "invalid number of auth")
 		return
 	}
-
 	userID, err := h.services.Authorization.ParseToken(headerParts[1])
 	if err != nil {
 		NewResponseError(c, http.StatusUnauthorized, err.Error())
@@ -55,4 +55,20 @@ func (h *Handler) robotIdentity(c *gin.Context) {
 		return
 	}
 	c.Set(robotCtx, robotID)
+}
+
+func (h *Handler) websocketIdentity(c *gin.Context) {
+	if c.GetHeader("Connection") != "Upgrade" {
+		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header Connections").Error())
+	}
+	if c.GetHeader("Upgrade") != "websocket" {
+		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header Upgrade").Error())
+	}
+	if c.Request.Header.Get("Sec-WebSocket-Version") == "" {
+		c.Request.Header.Set("Sec-WebSocket-Version", "13")
+	}
+
+	if c.Request.Header.Get("Sec-WebSocket-Key") == "" {
+		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header sec--key").Error())
+	}
 }

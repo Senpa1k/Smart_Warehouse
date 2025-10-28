@@ -11,8 +11,9 @@ type Authorization interface {
 	GetUser(string, string) (*models.Users, error)
 }
 
-type DashBoard interface {
-	GetInfo() (*entities.DashInfo, error)
+type WebsocketDashBoard interface {
+	UpdateRobot(*entities.UpdateRobot) error
+	InventoryAlert(*entities.InventoryAlert) error
 }
 
 type History interface {
@@ -31,13 +32,13 @@ type Repository struct {
 	Inventory
 	History
 	Authorization
-	DashBoard
+	WebsocketDashBoard
 }
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
-		Authorization: NewAuthPostgres(db),
-		Robot:         NewRobotPostges(db),
-		DashBoard:     NewDashBoardPostges(db),
+		Authorization:      NewAuthPostgres(db),
+		Robot:              NewRobotPostges(db),
+		WebsocketDashBoard: NewWebsocketDashBoardPostgres(db),
 	}
 }

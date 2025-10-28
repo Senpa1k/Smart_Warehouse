@@ -7,15 +7,23 @@ import (
 
 type RobotService struct {
 	repo repository.Robot
+	made chan<- interface{}
 }
 
-func NewRobotService(repo repository.Robot) *RobotService {
-	return &RobotService{repo: repo}
+func NewRobotService(repo repository.Robot, made chan<- interface{}) *RobotService {
+	return &RobotService{repo: repo, made: made}
 }
 
 func (r *RobotService) AddData(data entities.RobotsData) error {
 	//проверка валидности данных
-	return r.repo.AddData(data)
+
+	if err := r.repo.AddData(data); err != nil {
+		return err
+	}
+
+	made <- data
+
+	return nil
 }
 
 func (r *RobotService) CheckId(robotID string) bool {

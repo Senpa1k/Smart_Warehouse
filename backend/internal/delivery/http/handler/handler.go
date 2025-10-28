@@ -20,7 +20,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	{
 		auth := api.Group("/auth")
 		{
-			// auth.POST("/sing-up", h.singUp)
+			auth.POST("/sing-up", h.singUp)
 			auth.POST("/login", h.login)
 		}
 
@@ -29,9 +29,9 @@ func (h *Handler) InitRoutes() *gin.Engine {
 			robots.POST("/data", h.robots)
 		}
 
-		dashboard := api.Group("/dashboard", h.userIdentity)
+		ws := api.Group("/ws", h.userIdentity, h.websocketIdentity)
 		{
-			dashboard.GET("/current", h.currentDashBoard)
+			ws.GET("/dashboard", h.websocketDashBoard)
 		}
 
 	}

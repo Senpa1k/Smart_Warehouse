@@ -20,13 +20,22 @@ func NewRobotPostges(db *gorm.DB) *RobotPostgres {
 }
 
 func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обработать ошибки типа неправ знач в поле
+	tx := r.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	for _, scanResult := range data.ScanResults {
 		//проверка foreignkey и id_robot
 		var count int64
-		if r.db.Model(&models.Products{}).Where("id = ?", scanResult.ProductId).Count(&count); count == 0 {
+		if tx.Model(&models.Products{}).Where("id = ?", scanResult.ProductId).Count(&count); count == 0 {
+			tx.Rollback()
 			return fmt.Errorf("product does not exist")
 		}
-		if r.db.Model(&models.Robots{}).Where("id = ?", data.RobotId).Count(&count); count == 0 {
+		if tx.Model(&models.Robots{}).Where("id = ?", data.RobotId).Count(&count); count == 0 {
+			tx.Rollback()
 			return fmt.Errorf("robot does not exist")
 		}
 
@@ -42,7 +51,8 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 			CreatedAt:   time.Now(),
 		}
 
-		if err := r.db.Create(&inventoryHistory).Error; err != nil {
+		if err := tx.Create(&inventoryHistory).Error; err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
@@ -51,25 +61,29 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 	row, err1 := strconv.Atoi(nextPoint[1])
 	shelf, err2 := strconv.Atoi(nextPoint[2])
 	if err1 != nil {
+		tx.Rollback()
 		return err1
 	}
 	if err2 != nil {
+		tx.Rollback()
 		return err2
 	}
 
 	var robot models.Robots
-	if err := r.db.Where("id = ?", data.RobotId).First(&robot).Error; err != nil {
+	if err := tx.Where("id = ?", data.RobotId).First(&robot).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 	robot.BatteryLevel = data.BatteryLevel
 	robot.CurrentZone = nextPoint[0]
 	robot.CurrentRow = row
 	robot.CurrentShelf = shelf
-	if err := r.db.Save(&robot).Error; err != nil {
+	if err := tx.Save(&robot).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
-	return nil
+	return tx.Commit().Error
 }
 
 func (r *RobotPostgres) CheckId(robotID string) bool {
