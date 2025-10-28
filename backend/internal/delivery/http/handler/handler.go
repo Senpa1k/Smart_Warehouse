@@ -28,7 +28,6 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			robots.POST("/data", h.robots)
 		}
-
 		ws := api.Group("/ws", h.userIdentity, h.websocketIdentity)
 		{
 			ws.GET("/dashboard", h.websocketDashBoard)
@@ -43,12 +42,14 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			export.GET("/excel", h.exportExcel)
 		}
-		//ET /api/dashboard/curren
 		dashboard := api.Group("/dashboard", h.userIdentity)
 		{
 			dashboard.GET("/current", h.getDashInfo)
 		}
-
+		ai := api.Group("/ai")
+		{
+			ai.POST("/predict", h.AIRequest)
+		}
 	}
 
 	return router

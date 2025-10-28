@@ -35,12 +35,18 @@ type Robot interface {
 	CheckId(string) bool
 }
 
+type AI interface {
+	AIRequest(entities.AIRequest) (*[]models.Products, error)
+	AIResponse(entities.AIResponse) error
+}
+
 type Repository struct {
 	Robot
 	Inventory
 	Authorization
 	WebsocketDashBoard
 	DashBoard
+	AI
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -50,5 +56,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		WebsocketDashBoard: NewWebsocketDashBoardPostgres(db),
 		Inventory:          NewInventoryRepo(db),
 		DashBoard:          NewDashPostgres(db),
+		AI:                 NewAIPostgres(db),
 	}
 }

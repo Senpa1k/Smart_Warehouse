@@ -36,12 +36,17 @@ type Robot interface {
 	CheckId(string) bool
 }
 
+type AI interface {
+	Predict(entities.AIRequest) (*entities.AIResponse, error)
+}
+
 type Service struct {
 	Robot
 	Inventory
 	Authorization
 	WebsocketDashBoard
 	DashBoard
+	AI
 }
 
 func NewService(repos *repository.Repository) *Service {
@@ -51,5 +56,6 @@ func NewService(repos *repository.Repository) *Service {
 		WebsocketDashBoard: NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
 		Inventory:          NewInventoryService(repos.Inventory),
 		DashBoard:          NewDashService(repos.DashBoard),
+		AI:                 NewAIService(repos.AI),
 	}
 }

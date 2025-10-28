@@ -69,3 +69,27 @@ func (h *Handler) getDashInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dash)
 }
+
+func (h *Handler) AIRequest(c *gin.Context) {
+	_, ok := c.Get(userCtx)
+	if !ok {
+		NewResponseError(c, http.StatusInternalServerError, "user not found")
+		return
+	}
+
+	var air entities.AIRequest
+	if err := c.Bind(&air); err != nil {
+		NewResponseError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	res, err := h.services.AI.Predict(air)
+	if err != nil {
+		NewResponseError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"predictions": res.Predictions,
+		"confidence":  res.Confidence,
+	})
+}
