@@ -33,6 +33,16 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			ws.GET("/dashboard", h.websocketDashBoard)
 		}
+		inventory := api.Group("/inventory", h.userIdentity)
+		{
+			inventory.POST("/import", h.importInventory)
+			inventory.GET("/history", h.exportInventoryHistory)
+		}
+
+		export := api.Group("/export", h.userIdentity)
+		{
+			export.GET("/excel", h.exportExcel)
+		}
 
 	}
 

@@ -15,7 +15,7 @@ type RobotPostgres struct {
 	db *gorm.DB
 }
 
-func NewRobotPostges(db *gorm.DB) *RobotPostgres {
+func NewRobotPostgres(db *gorm.DB) *RobotPostgres {
 	return &RobotPostgres{db: db}
 }
 
