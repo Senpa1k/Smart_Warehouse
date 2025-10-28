@@ -45,8 +45,7 @@ func (h *Handler) AIRequest(c *gin.Context) {
 		return
 	}
 
-	//дописать 
-	res, err := h.services.AI.AIPrediction(air)
+	res, err := h.services.AI.Predict(air)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -54,6 +53,6 @@ func (h *Handler) AIRequest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"predictions": res.Predictions,
-		"confidience": res.Confidience,
+		"confidence": res.Confidence,
 	})
 }

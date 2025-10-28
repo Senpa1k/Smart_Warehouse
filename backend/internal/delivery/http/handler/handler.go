@@ -30,6 +30,10 @@ func (h *Handler) InitRoutes() *gin.Engine {
 			robots.POST("/data", h.robots)
 		}
 
+		ai := api.Group("/ai")
+		{
+			ai.POST("/predict", h.AIRequest)
+		}
 	}
 
 	return router

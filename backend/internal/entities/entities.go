@@ -21,3 +21,19 @@ type ScanResults struct {
 	Quantity    int    `json:"quantity" binding:"required"`
 	Status      string `json:"status" binding:"required"`
 }
+
+type AIRequest struct {
+	PeriodDays int `json:"period_days" binding:"required"`
+	Categories []string `json:"categories" binding:"required"`
+}
+
+type AIResponse struct {
+	Predictions []struct{
+		ProductID string `json:"product_id"`
+		PredictionDate string `json:"prediction_date"`
+		DaysUntilStockout int `json:"days_until_stockout"`
+		RecommendedOrder int `json:"recommended_order"`
+		ConfidenceScore float64 `json:"confidence_score"`
+	} `json:"predictions"`
+	Confidence float64 `json:"confidience"`
+}

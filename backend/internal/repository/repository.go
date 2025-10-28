@@ -24,17 +24,24 @@ type Robot interface {
 	AddData(entities.RobotsData) error
 }
 
+type AI interface {
+	AIRequest(entities.AIRequest) (*[]models.Products, error)
+	AIResponse(entities.AIResponse) error
+}
+
 type Repository struct {
 	Robot
 	Inventory
 	History
 	Authorization
 	DashBoard
+	AI
 }
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db),
 		Robot:         NewRobotPostges(db),
+		AI:				NewAIPostgres(db),
 	}
 }

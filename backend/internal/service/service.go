@@ -25,17 +25,23 @@ type Robot interface {
 	AddData(entities.RobotsData) error
 }
 
+type AI interface {
+	Predict(entities.AIRequest) (*entities.AIResponse, error)
+}
+
 type Service struct {
 	Robot
 	Inventory
 	History
 	Authorization
 	DashBoard
+	AI
 }
 
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization),
 		Robot:         NewRobotService(repos.Robot),
+		AI: 			NewAIService(repos.AI),
 	}
 }
