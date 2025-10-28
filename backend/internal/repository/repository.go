@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"gorm.io/gorm"
@@ -12,8 +14,7 @@ type Authorization interface {
 }
 
 type WebsocketDashBoard interface {
-	UpdateRobot(*entities.UpdateRobot) error
-	InventoryAlert(*entities.InventoryAlert) error
+	InventoryAlertScanned(*entities.InventoryAlert, time.Time, string) error
 }
 
 type History interface {

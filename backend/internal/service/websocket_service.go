@@ -32,14 +32,12 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 		for {
 			select {
 			case who := <-made: // либо робот либо аи преддикты
-				var typeMessage string
-				var result interface{}
 
 				if scan, ok := who.(entities.RobotsData); ok { // robot
-					enti := entities.UpdateRobot{}
-					typeMessage = "robot_update"
-					updateRobot(&enti, &scan)
-					result = enti
+					if err := r.ScannedRobotSend(conn, scan); err != nil {
+						logrus.Print("вебсокет закрыт")
+						break
+					}
 				}
 				// } else if predict, ok := who.(entities.ScanResults); ok{ // predict
 				// 	var enti entities.InventoryAlert
@@ -49,14 +47,6 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 				// 		break
 				// 	}
 				// }
-
-				err := conn.WriteJSON(map[string]interface{}{
-					"type": typeMessage,
-					"data": result,
-				})
-				if err != nil {
-					logrus.Print("вебсокет закрыт")
-				}
 
 			case <-done:
 				break out
@@ -80,6 +70,36 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 	}()
 
 	wg.Wait()
+}
+
+func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan entities.RobotsData) error {
+	result := entities.UpdateRobot{}
+	updateRobot(&result, &scan)
+	err := conn.WriteJSON(map[string]interface{}{
+		"type": "robot_update",
+		"data": result,
+	})
+	if err != nil {
+		return err
+	}
+
+	result2 := entities.InventoryAlert{}
+	for _, scanResult := range scan.ScanResults {
+		if scanResult.Status != "OK" {
+			if satatus := r.repo.InventoryAlertScanned(&result2, scan.Timestamp, scanResult.ProductId); satatus == nil {
+				err := conn.WriteJSON(map[string]interface{}{
+					"type": "inventory_alter",
+					"data": result2,
+				})
+				if err != nil {
+					return err
+				}
+			} else {
+				logrus.Print(satatus)
+			}
+		}
+	}
+	return nil
 }
 
 func updateRobot(ru *entities.UpdateRobot, data *entities.RobotsData) {
