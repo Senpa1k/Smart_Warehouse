@@ -8,6 +8,7 @@ INSERT INTO products (id, name, category, min_stock, optimal_stock) VALUES
 ('TEL-2345', 'Коммутатор SG-108', 'network', 8, 80);
 
 INSERT INTO robots (id, status, battery_level) VALUES
+('IMPORT_ROBOT', 'active', 100),
 ('RB-001', 'active', 85),
 ('RB-002', 'active', 92),
 ('RB-003', 'charging', 100);

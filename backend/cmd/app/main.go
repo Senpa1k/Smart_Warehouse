@@ -26,7 +26,7 @@ func main() {
 
 	srv := new(server.Server)
 	go func() {
-		if err := srv.Run("8080", handler.InitRoutes()); err != nil {
+		if err := srv.Run("3000", handler.InitRoutes()); err != nil {
 			logrus.Fatalf("error in init http server: %s", err.Error())
 		}
 		done <- struct{}{}
@@ -42,6 +42,6 @@ func main() {
 
 	closer, err := db.DB()
 	if err2 := closer.Close(); err != nil || err2 != nil {
-		logrus.Fatalf("error with clossing db %s", err.Error())
+		logrus.Fatalf("error with closing db %s", err.Error())
 	}
 }

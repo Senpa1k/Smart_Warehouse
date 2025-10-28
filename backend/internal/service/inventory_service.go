@@ -36,6 +36,8 @@ type HistoryResponse struct {
 	} `json:"pagination"`
 }
 
+const robotIDForImport = "IMPORT_ROBOT"
+
 func (s *InventoryService) ImportCSV(csvData io.Reader) (*ImportResult, error) {
 	reader := csv.NewReader(csvData)
 	reader.Comma = ';'
@@ -86,34 +88,9 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*ImportResult, error) {
 		}
 
 		productID := strings.TrimSpace(record[0])
-		productName := strings.TrimSpace(record[1])
-
-		var product models.Products
-		if err := s.repo.GetProductByID(productID); err != nil {
-			product = models.Products{
-				ID:   productID,
-				Name: productName,
-			}
-			if err := s.repo.CreateProduct(&product); err != nil {
-				failedCount++
-				errors = append(errors, fmt.Sprintf("Failed to create product %s: %v", productID, err))
-				continue
-			}
-		} else {
-			if product.Name != productName {
-				product.Name = productName
-				if err := s.repo.UpdateProduct(&product); err != nil {
-					failedCount++
-					errors = append(errors, fmt.Sprintf("Failed to update product %s: %v", productID, err))
-					continue
-				}
-			}
-		}
-
-		robotID := "IMPORT-" + productID
 
 		history := models.InventoryHistory{
-			RobotID:     robotID,
+			RobotID:     robotIDForImport,
 			ProductID:   productID,
 			Quantity:    quantity,
 			Zone:        strings.TrimSpace(record[3]),
