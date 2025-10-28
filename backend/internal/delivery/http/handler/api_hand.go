@@ -31,3 +31,29 @@ func (h *Handler) robots(c *gin.Context) {
 		"message_id": "tmp_message_id",
 	})
 }
+
+func (h *Handler) AIRequest(c *gin.Context) {
+	_, ok := c.Get(userCtx)
+	if !ok {
+		NewResponseError(c, http.StatusInternalServerError, "user not found")
+		return
+	}
+
+	var air entities.AIRequest
+	if err := c.Bind(&air); err != nil {
+		NewResponseError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	//дописать 
+	res, err := h.services.AI.AIPrediction(air)
+	if err != nil {
+		NewResponseError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"predictions": res.Predictions,
+		"confidience": res.Confidience,
+	})
+}
