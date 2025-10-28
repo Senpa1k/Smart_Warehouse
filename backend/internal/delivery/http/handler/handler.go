@@ -20,7 +20,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	{
 		auth := api.Group("/auth")
 		{
-			auth.POST("/sing-up", h.singUp)
+			auth.POST("/sign-up", h.signUp)
 			auth.POST("/login", h.login)
 		}
 
@@ -42,6 +42,11 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		export := api.Group("/export", h.userIdentity)
 		{
 			export.GET("/excel", h.exportExcel)
+		}
+		//ET /api/dashboard/curren
+		dashboard := api.Group("/dashboard", h.userIdentity)
+		{
+			dashboard.GET("/current", h.getDashInfo)
 		}
 
 	}

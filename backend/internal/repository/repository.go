@@ -26,6 +26,10 @@ type Inventory interface {
 	GetHistory(from, to, zone, status string, limit, offset int) ([]models.InventoryHistory, int64, error)
 }
 
+type DashBoard interface {
+	GetDashInfo(*entities.DashInfo) error
+}
+
 type Robot interface {
 	AddData(entities.RobotsData) error
 	CheckId(string) bool
@@ -36,6 +40,7 @@ type Repository struct {
 	Inventory
 	Authorization
 	WebsocketDashBoard
+	DashBoard
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -44,5 +49,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		Robot:              NewRobotPostgres(db),
 		WebsocketDashBoard: NewWebsocketDashBoardPostgres(db),
 		Inventory:          NewInventoryRepo(db),
+		DashBoard:          NewDashPostgres(db),
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handler) singUp(c *gin.Context) { // not task
+func (h *Handler) signUp(c *gin.Context) { // not task
 	var input models.Users
 
 	if err := c.BindJSON(&input); err != nil {

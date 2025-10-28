@@ -27,6 +27,10 @@ type Inventory interface {
 	GetHistory(from, to, zone, status string, limit, offset int) (*HistoryResponse, error)
 }
 
+type DashBoard interface {
+	GetDashInfo(*entities.DashInfo) error
+}
+
 type Robot interface {
 	AddData(entities.RobotsData) error
 	CheckId(string) bool
@@ -37,6 +41,7 @@ type Service struct {
 	Inventory
 	Authorization
 	WebsocketDashBoard
+	DashBoard
 }
 
 func NewService(repos *repository.Repository) *Service {
@@ -45,5 +50,6 @@ func NewService(repos *repository.Repository) *Service {
 		Robot:              NewRobotService(repos.Robot, made),
 		WebsocketDashBoard: NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
 		Inventory:          NewInventoryService(repos.Inventory),
+		DashBoard:          NewDashService(repos.DashBoard),
 	}
 }

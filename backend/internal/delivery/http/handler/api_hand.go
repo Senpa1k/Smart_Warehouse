@@ -53,3 +53,19 @@ func (h *Handler) websocketDashBoard(c *gin.Context) {
 	h.services.WebsocketDashBoard.RunStream(conn)
 	logrus.Print("вебсокет закрыт")
 }
+
+func (h *Handler) getDashInfo(c *gin.Context) {
+	_, ok := c.Get(userCtx)
+	if !ok {
+		NewResponseError(c, http.StatusInternalServerError, "robot id not found")
+		return
+	}
+
+	var dash entities.DashInfo = entities.DashInfo{}
+	if err := h.services.DashBoard.GetDashInfo(&dash); err != nil {
+		NewResponseError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dash)
+}
