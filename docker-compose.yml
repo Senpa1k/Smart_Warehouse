@@ -34,8 +34,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      GIGACHAT_API_KEY: ${GIGACHAT_API_KEY}
+      API_KEY: ${API_KEY}
       AI_SERVICE: sber
+      SALT: ${SALT}
     ports:
       - "3000:3000"
     depends_on:
