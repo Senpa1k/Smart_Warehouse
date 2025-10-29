@@ -1,6 +1,6 @@
 module github.com/Senpa1k/Smart_Warehouse
 
-go 1.24.0
+go 1.24.1
 
 toolchain go1.24.9
 
@@ -9,14 +9,16 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/paulrzcz/go-gigachat v0.1.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/xuri/excelize/v2 v2.10.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.0
 )
 
+require github.com/google/uuid v1.6.0 // indirect
+
 require (
+	github.com/Role1776/gigago v1.0.0-rc.1
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
@@ -27,7 +29,6 @@ require (
 	github.com/go-playground/validator/v10 v10.27.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

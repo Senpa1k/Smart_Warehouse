@@ -84,7 +84,7 @@ func generateJWTToken(id uint) string {
 		id,
 	})
 
-	jwt_secret, _ := config.Get("jwt_secret") // jwt_secret будет доступен в контейнере
+	jwt_secret, _ := config.Get("JWT_SECRET")
 	str, _ := token.SignedString([]byte(jwt_secret))
 	return str
 }

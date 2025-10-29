@@ -1,69 +1,61 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"strconv"
 
+	"github.com/Role1776/gigago"
 	"github.com/Senpa1k/Smart_Warehouse/internal/config"
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
-	"github.com/paulrzcz/go-gigachat"
 )
 
 type AIService struct {
-	repo   repository.AI
-	client *gigachat.Client
-	made   chan<- interface{}
+	repo repository.AI
+	made chan<- interface{}
 }
 
 func NewAIService(repo repository.AI, made chan<- interface{}) *AIService {
-	clientID, err1 := config.Get("GIGACHAT_CLIENT_ID")
-	clientSecret, err2 := config.Get("GIGACHAT_CLIENT_SECRET")
-	if err1 != nil {
-		log.Printf("Failed to get GigaChat credentials: %v, %v", err1, err2)
-		return nil
-	}
-	if err2 != nil {
-		return nil
-	}
-
-	client, err := gigachat.NewClient(clientID, clientSecret)
-	if err != nil {
-		log.Printf("Failed to create GigaChat client: %v", err)
-		return nil
-	}
-	fmt.Println("log1")
-
-	return &AIService{repo: repo, client: client, made: made}
+	return &AIService{repo: repo, made: made}
 }
 
 func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error) {
-	fmt.Println("log2")
+	ctx := context.Background()
+
+	apikey, err := config.Get("API_KEY")
+	if err != nil {
+		log.Printf("Failed to get Giga Api key: %v", err)
+		return nil, err
+	}
+
+	client, err := gigago.NewClient(ctx, apikey, gigago.WithCustomInsecureSkipVerify(true))
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
 	products, err := ai.repo.AIRequest(rq)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("log3")
 
 	assistantRequest, err := json.Marshal(products)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("log3")
 
-	resp, err := ai.client.Chat(&gigachat.ChatRequest{
-		Model: gigachat.GIGACHAT_2_LITE,
-		Messages: []gigachat.Message{
-			{
-				Role:    gigachat.SystemRole,
-				Content: "Ты - AI ассистент для анализа складских запасов. Анализируй данные инвентаризации и прогнозируй остатки товаров. Отвечай ТОЛЬКО в формате JSON.",
-			},
-			{
-				Role: gigachat.AssistantRole,
-				Content: `Проанализируй данные складских запасов указанные в этом json` + string(assistantRequest) + `и спрогнозируй остатки на количество дней равное ` + strconv.Itoa(rq.PeriodDays) +
-					` Проанализируй тенденции потребления для каждого товара и спрогнозируй:
+	model := client.GenerativeModel("GigaChat")
+	model.SystemInstruction = "Ты - AI ассистент для анализа складских запасов. Анализируй данные инвентаризации и прогнозируй остатки товаров. Отвечай ТОЛЬКО в формате JSON."
+	model.Temperature = 0.2
+	model.TopP = 0.2
+	model.MaxTokens = 2000
+	model.RepetitionPenalty = 1.2
+
+	messages := []gigago.Message{
+		{Role: gigago.RoleUser, Content: `Проанализируй данные складских запасов указанные в этом json` + string(assistantRequest) + `и спрогнозируй остатки на количество дней равное ` + strconv.Itoa(rq.PeriodDays) +
+			` Проанализируй тенденции потребления для каждого товара и спрогнозируй:
 				1. Через сколько дней закончатся запасы (days_until_stockout)
 				2. Рекомендуемое количество для заказа (recommended_order_quantity)
 				3. Достоверность прогноза (confidence) от 0.0 до 1.0
@@ -83,16 +75,10 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 				}
 
 				Только JSON, без дополнительного текста.`,
-			},
 		},
-		Temperature:       float64Ptr(0.2),
-		TopP:              float64Ptr(0.2),
-		MaxTokens:         int64Ptr(2048),
-		RepetitionPenalty: float64Ptr(1.2),
-		Stream:            boolPtr(false),
-	})
-	fmt.Println("log4")
+	}
 
+	resp, err := model.Generate(ctx, messages)
 	if err != nil {
 		return nil, err
 	}
@@ -101,18 +87,12 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &aiResponse); err != nil {
 		return nil, err
 	}
-	fmt.Println("log5")
 
 	if err := ai.repo.AIResponse(aiResponse); err != nil {
 		return nil, err
 	}
-	fmt.Println("log6")
 
 	ai.made <- aiResponse
 
 	return &aiResponse, nil
 }
-
-func float64Ptr(f float64) *float64 { return &f }
-func int64Ptr(i int64) *int64       { return &i }
-func boolPtr(b bool) *bool          { return &b }

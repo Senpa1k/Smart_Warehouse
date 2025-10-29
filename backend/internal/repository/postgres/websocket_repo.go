@@ -31,6 +31,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.Invent
 		return err
 	}
 
+	enti.Type = "inventory_alert"
 	enti.Data.ProductId = inventoryHistory.ProductID
 	enti.Data.ProductName = product
 	enti.Data.CurrentQuantity = inventoryHistory.Quantity
@@ -46,7 +47,6 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.Invent
 }
 
 func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.InventoryAlert, predict entities.Predictions) error {
-	// Получаем информацию о продукте из базы данных
 	var product models.Products
 	if err := w.db.Where("id = ?", predict.ProductID).First(&product).Error; err != nil {
 		return fmt.Errorf("failed to get product: %w", err)
@@ -66,7 +66,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 	case predict.DaysUntilStockout <= 7:
 		message = fmt.Sprintf("Рекомендуется пополнение. Товар закончится через %d дней", predict.DaysUntilStockout)
 	default:
-		message = "Запасы в норме"
+		return fmt.Errorf("everything norm")
 	}
 
 	status := "OK"
