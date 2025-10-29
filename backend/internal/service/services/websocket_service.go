@@ -35,18 +35,15 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 
 				if scan, ok := who.(entities.RobotsData); ok { // robot
 					if err := r.ScannedRobotSend(conn, scan); err != nil {
-						logrus.Print("вебсокет закрыт")
+						logrus.Print("Websocket was closed")
+						break
+					}
+				} else if scan, ok := who.(entities.AIResponse); !ok { // аи предикт AIResponse
+					if err := r.ScannedAiSend(conn, scan); err != nil {
+						logrus.Print("Websocket was closed")
 						break
 					}
 				}
-				// } else if predict, ok := who.(entities.ScanResults); ok{ // predict
-				// 	var enti entities.InventoryAlert
-				// 	typeMessage = "inventory_alert"
-				// 	err := r.repo.InventoryAlert(&enti)
-				// 	if err != nil {
-				// 		break
-				// 	}
-				// }
 
 			case <-done:
 				break out
@@ -86,7 +83,7 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 	result2 := entities.InventoryAlert{}
 	for _, scanResult := range scan.ScanResults {
 		if scanResult.Status != "OK" {
-			if satatus := r.repo.InventoryAlertScanned(&result2, scan.Timestamp, scanResult.ProductId); satatus == nil {
+			if status := r.repo.InventoryAlertScanned(&result2, scan.Timestamp, scanResult.ProductId); status == nil {
 				err := conn.WriteJSON(map[string]interface{}{
 					"type": "inventory_alert",
 					"data": result2,
@@ -95,8 +92,27 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 					return err
 				}
 			} else {
-				logrus.Print(satatus)
+				logrus.Print(status)
 			}
+		}
+	}
+	return nil
+}
+
+func (r *WebsocketDashBoardService) ScannedAiSend(conn *websocket.Conn, scan entities.AIResponse) error {
+	result := entities.InventoryAlert{}
+
+	for _, predict := range scan.Predictions {
+		if err := r.repo.InventoryAlertPredict(&result, predict); err == nil {
+			err := conn.WriteJSON(map[string]interface{}{
+				"type": "inventory_alert",
+				"data": result,
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			logrus.Print(err)
 		}
 	}
 	return nil

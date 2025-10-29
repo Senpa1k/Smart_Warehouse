@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
@@ -40,6 +41,57 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.Invent
 	enti.Data.Timestamp = inventoryHistory.ScannedAt
 	enti.Data.AlterType = "scanned"
 	enti.Data.Message = inventoryHistory.Status + " остаток! Требуется пополнение."
+
+	return nil
+}
+
+func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.InventoryAlert, predict entities.Predictions) error {
+	// Получаем информацию о продукте из базы данных
+	var product models.Products
+	if err := w.db.Where("id = ?", predict.ProductID).First(&product).Error; err != nil {
+		return fmt.Errorf("failed to get product: %w", err)
+	}
+
+	var currentQuantity int
+	if err := w.db.Table("inventory_history").Where("product_id = ?", predict.ProductID).Select("COALESCE(quantity, 0)").Scan(&currentQuantity).Error; err != nil {
+		return fmt.Errorf("failed to get quantity: %w", err)
+	}
+
+	alertType := "predicted"
+	message := ""
+
+	switch {
+	case predict.DaysUntilStockout <= 2:
+		message = fmt.Sprintf("КРИТИЧЕСКИЙ УРОВЕНЬ! Товар закончится через %d дней", predict.DaysUntilStockout)
+	case predict.DaysUntilStockout <= 7:
+		message = fmt.Sprintf("Рекомендуется пополнение. Товар закончится через %d дней", predict.DaysUntilStockout)
+	default:
+		message = "Запасы в норме"
+	}
+
+	status := "OK"
+	if currentQuantity <= product.MinStock {
+		status = "CRITICAL"
+	} else if currentQuantity <= product.OptimalStock/2 {
+		status = "LOW_STOCK"
+	}
+
+	enti.Type = "inventory_alert"
+	enti.Data.ProductId = predict.ProductID
+	enti.Data.ProductName = product.Name
+	enti.Data.CurrentQuantity = currentQuantity
+	enti.Data.Zone = ""
+	enti.Data.Row = 0
+	enti.Data.Shelf = 0
+	enti.Data.Status = status
+	enti.Data.AlterType = alertType
+	enti.Data.Timestamp = time.Now()
+	enti.Data.Message = fmt.Sprintf(
+		"%s. Рекомендуемый заказ: %d единиц. Уверенность прогноза: %.1f%%",
+		message,
+		predict.RecommendedOrder,
+		predict.ConfidenceScore*100,
+	)
 
 	return nil
 }

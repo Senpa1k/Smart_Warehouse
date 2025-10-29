@@ -71,14 +71,16 @@ type AIRequest struct {
 }
 
 type AIResponse struct {
-	Predictions []struct {
-		ProductID         string  `json:"product_id"`
-		PredictionDate    string  `json:"prediction_date"`
-		DaysUntilStockout int     `json:"days_until_stockout"`
-		RecommendedOrder  int     `json:"recommended_order"`
-		ConfidenceScore   float64 `json:"confidence_score"`
-	} `json:"predictions"`
-	Confidence float64 `json:"confidience"`
+	Predictions []Predictions `json:"predictions"`
+	Confidence  float64       `json:"confidience"`
+}
+
+type Predictions struct {
+	ProductID         string  `json:"product_id"`
+	PredictionDate    string  `json:"prediction_date"`
+	DaysUntilStockout int     `json:"days_until_stockout"`
+	RecommendedOrder  int     `json:"recommended_order"`
+	ConfidenceScore   float64 `json:"confidence_score"`
 }
 
 type ImportResult struct {

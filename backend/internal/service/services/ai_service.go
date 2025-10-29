@@ -15,9 +15,10 @@ import (
 type AIService struct {
 	repo   repository.AI
 	client *gigachat.Client
+	made   chan<- interface{}
 }
 
-func NewAIService(repo repository.AI) *AIService {
+func NewAIService(repo repository.AI, made chan<- interface{}) *AIService {
 	clientID, err1 := config.Get("GIGACHAT_CLIENT_ID")
 	clientSecret, err2 := config.Get("GIGACHAT_CLIENT_SECRET")
 	if err1 != nil {
@@ -35,7 +36,7 @@ func NewAIService(repo repository.AI) *AIService {
 	}
 	fmt.Println("log1")
 
-	return &AIService{repo: repo, client: client}
+	return &AIService{repo: repo, client: client, made: made}
 }
 
 func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error) {
@@ -106,6 +107,8 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 		return nil, err
 	}
 	fmt.Println("log6")
+
+	ai.made <- aiResponse
 
 	return &aiResponse, nil
 }

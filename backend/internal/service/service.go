@@ -57,6 +57,6 @@ func NewService(repos *repository.Repository) *Service {
 		WebsocketDashBoard: services.NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
 		Inventory:          services.NewInventoryService(repos.Inventory),
 		DashBoard:          services.NewDashService(repos.DashBoard),
-		AI:                 services.NewAIService(repos.AI),
+		AI:                 services.NewAIService(repos.AI, made),
 	}
 }
