@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -32,20 +33,24 @@ func NewAIService(repo repository.AI) *AIService {
 		log.Printf("Failed to create GigaChat client: %v", err)
 		return nil
 	}
+	fmt.Println("log1")
 
 	return &AIService{repo: repo, client: client}
 }
 
 func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error) {
+	fmt.Println("log2")
 	products, err := ai.repo.AIRequest(rq)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("log3")
 
 	assistantRequest, err := json.Marshal(products)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("log3")
 
 	resp, err := ai.client.Chat(&gigachat.ChatRequest{
 		Model: gigachat.GIGACHAT_2_LITE,
@@ -85,6 +90,7 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 		RepetitionPenalty: float64Ptr(1.2),
 		Stream:            boolPtr(false),
 	})
+	fmt.Println("log4")
 
 	if err != nil {
 		return nil, err
@@ -94,10 +100,12 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &aiResponse); err != nil {
 		return nil, err
 	}
+	fmt.Println("log5")
 
 	if err := ai.repo.AIResponse(aiResponse); err != nil {
 		return nil, err
 	}
+	fmt.Println("log6")
 
 	return &aiResponse, nil
 }

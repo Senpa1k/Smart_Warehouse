@@ -46,7 +46,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			dashboard.GET("/current", h.getDashInfo)
 		}
-		ai := api.Group("/ai")
+		ai := api.Group("/ai", h.userIdentity)
 		{
 			ai.POST("/predict", h.AIRequest)
 		}

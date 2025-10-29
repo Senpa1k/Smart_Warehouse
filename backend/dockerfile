@@ -19,5 +19,14 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/migrator .
 COPY --from=builder /app/migrations ./migrations
 
-CMD ["./migrator"] # поравить, чтобы запускалось не каждый раз при запуске контейнера
-CMD ["./main"]
+RUN echo '#!/bin/sh' > entrypoint.sh && \
+    echo '' >> entrypoint.sh && \
+    echo 'if [ ! -f /root/migrations_done ]; then' >> entrypoint.sh && \
+    echo '  ./migrator' >> entrypoint.sh && \
+    echo '  touch /root/migrations_done' >> entrypoint.sh && \
+    echo 'fi' >> entrypoint.sh && \
+    echo '' >> entrypoint.sh && \
+    echo 'exec ./main "$@"' >> entrypoint.sh && \
+    chmod +x entrypoint.sh
+
+ENTRYPOINT ["./entrypoint.sh"]
