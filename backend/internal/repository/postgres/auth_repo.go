@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"

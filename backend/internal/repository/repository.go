@@ -5,6 +5,7 @@ import (
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
+	"github.com/Senpa1k/Smart_Warehouse/internal/repository/postgres"
 	"gorm.io/gorm"
 )
 
@@ -51,11 +52,11 @@ type Repository struct {
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
-		Authorization:      NewAuthPostgres(db),
-		Robot:              NewRobotPostgres(db),
-		WebsocketDashBoard: NewWebsocketDashBoardPostgres(db),
-		Inventory:          NewInventoryRepo(db),
-		DashBoard:          NewDashPostgres(db),
-		AI:                 NewAIPostgres(db),
+		Authorization:      postgres.NewAuthPostgres(db),
+		Robot:              postgres.NewRobotPostgres(db),
+		WebsocketDashBoard: postgres.NewWebsocketDashBoardPostgres(db),
+		Inventory:          postgres.NewInventoryRepo(db),
+		DashBoard:          postgres.NewDashPostgres(db),
+		AI:                 postgres.NewAIPostgres(db),
 	}
 }

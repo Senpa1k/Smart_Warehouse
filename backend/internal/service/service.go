@@ -6,6 +6,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/Senpa1k/Smart_Warehouse/internal/service/services"
 	"github.com/gorilla/websocket"
 )
 
@@ -22,9 +23,9 @@ type WebsocketDashBoard interface {
 }
 
 type Inventory interface {
-	ImportCSV(csvData io.Reader) (*ImportResult, error)
+	ImportCSV(csvData io.Reader) (*entities.ImportResult, error)
 	ExportExcel(productIDs []string) ([]byte, error)
-	GetHistory(from, to, zone, status string, limit, offset int) (*HistoryResponse, error)
+	GetHistory(from, to, zone, status string, limit, offset int) (*entities.HistoryResponse, error)
 }
 
 type DashBoard interface {
@@ -51,11 +52,11 @@ type Service struct {
 
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
-		Authorization:      NewAuthService(repos.Authorization),
-		Robot:              NewRobotService(repos.Robot, made),
-		WebsocketDashBoard: NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
-		Inventory:          NewInventoryService(repos.Inventory),
-		DashBoard:          NewDashService(repos.DashBoard),
-		AI:                 NewAIService(repos.AI),
+		Authorization:      services.NewAuthService(repos.Authorization),
+		Robot:              services.NewRobotService(repos.Robot, made),
+		WebsocketDashBoard: services.NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
+		Inventory:          services.NewInventoryService(repos.Inventory),
+		DashBoard:          services.NewDashService(repos.DashBoard),
+		AI:                 services.NewAIService(repos.AI),
 	}
 }

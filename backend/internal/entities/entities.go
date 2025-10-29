@@ -80,3 +80,27 @@ type AIResponse struct {
 	} `json:"predictions"`
 	Confidence float64 `json:"confidience"`
 }
+
+type ImportResult struct {
+	SuccessCount int      `json:"success_count"`
+	FailedCount  int      `json:"failed_count"`
+	Errors       []string `json:"errors"`
+}
+
+type HistoryResponse struct {
+	Total      int64                     `json:"total"`
+	Items      []models.InventoryHistory `json:"items"`
+	Pagination struct {
+		Limit  int `json:"limit"`
+		Offset int `json:"offset"`
+	} `json:"pagination"`
+}
+
+type HistoryQuery struct {
+	From   string `form:"from" binding:"required"`
+	To     string `form:"to" binding:"required"`
+	Zone   string `form:"zone"`
+	Status string `form:"status"`
+	Limit  int    `form:"limit"`
+	Offset int    `form:"offset"`
+}

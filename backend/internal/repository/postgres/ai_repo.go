@@ -1,10 +1,11 @@
-package repository
+package postgres
 
 import (
+	"time"
+
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"gorm.io/gorm"
-	"time"
 )
 
 type AIPostgres struct {
@@ -17,12 +18,12 @@ func NewAIPostgres(db *gorm.DB) *AIPostgres {
 
 func (ai *AIPostgres) AIRequest(rq entities.AIRequest) (*[]models.Products, error) {
 	var products []models.Products
-    err := ai.db.Where("category IN ?", rq.Categories).Find(&products).Error
-    if err != nil {
-        return nil, err
-    }
+	err := ai.db.Where("category IN ?", rq.Categories).Find(&products).Error
+	if err != nil {
+		return nil, err
+	}
 
-    return &products, nil
+	return &products, nil
 }
 
 func (ai *AIPostgres) AIResponse(rp entities.AIResponse) error {
@@ -33,16 +34,16 @@ func (ai *AIPostgres) AIResponse(rp entities.AIResponse) error {
 		}
 
 		var prediction models.AiPrediction = models.AiPrediction{
-			ProductID: elem.ProductID,
-			PredictionDate: predictionDate,
+			ProductID:         elem.ProductID,
+			PredictionDate:    predictionDate,
 			DaysUntilStockout: elem.DaysUntilStockout,
-			RecommendedOrder: elem.RecommendedOrder,
-			ConfidenceScore: elem.ConfidenceScore,
+			RecommendedOrder:  elem.RecommendedOrder,
+			ConfidenceScore:   elem.ConfidenceScore,
 		}
-		
-		if err := ai.db.Create(&prediction).Error; err != nil{
+
+		if err := ai.db.Create(&prediction).Error; err != nil {
 			return err
-		}		
+		}
 	}
 
 	return nil

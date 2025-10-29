@@ -1,4 +1,4 @@
-package service
+package services
 
 import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
@@ -21,7 +21,7 @@ func (r *RobotService) AddData(data entities.RobotsData) error {
 		return err
 	}
 
-	made <- data
+	r.made <- data
 
 	return nil
 }

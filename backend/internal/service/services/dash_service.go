@@ -1,4 +1,4 @@
-package service
+package services
 
 import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"

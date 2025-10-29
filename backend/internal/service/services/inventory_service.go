@@ -1,4 +1,4 @@
-package service
+package services
 
 import (
 	"encoding/csv"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
 	"github.com/xuri/excelize/v2"
@@ -21,22 +22,7 @@ func NewInventoryService(repo repository.Inventory) *InventoryService {
 	return &InventoryService{repo: repo}
 }
 
-type ImportResult struct {
-	SuccessCount int      `json:"success_count"`
-	FailedCount  int      `json:"failed_count"`
-	Errors       []string `json:"errors"`
-}
-
-type HistoryResponse struct {
-	Total      int64                     `json:"total"`
-	Items      []models.InventoryHistory `json:"items"`
-	Pagination struct {
-		Limit  int `json:"limit"`
-		Offset int `json:"offset"`
-	} `json:"pagination"`
-}
-
-func (s *InventoryService) ImportCSV(csvData io.Reader) (*ImportResult, error) {
+func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult, error) {
 	reader := csv.NewReader(csvData)
 	reader.Comma = ';'
 	reader.FieldsPerRecord = -1
@@ -133,7 +119,7 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*ImportResult, error) {
 		}
 	}
 
-	return &ImportResult{
+	return &entities.ImportResult{
 		SuccessCount: successCount,
 		FailedCount:  failedCount,
 		Errors:       errors,
@@ -178,13 +164,13 @@ func (s *InventoryService) ExportExcel(productIDs []string) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offset int) (*HistoryResponse, error) {
+func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offset int) (*entities.HistoryResponse, error) {
 	histories, total, err := s.repo.GetHistory(from, to, zone, status, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
 
-	response := &HistoryResponse{
+	response := &entities.HistoryResponse{
 		Total: total,
 		Items: histories,
 	}

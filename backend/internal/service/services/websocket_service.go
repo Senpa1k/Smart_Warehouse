@@ -1,4 +1,4 @@
-package service
+package services
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 	out:
 		for {
 			select {
-			case who := <-made: // либо робот либо аи преддикты
+			case who := <-r.made: // либо робот либо аи преддикты
 
 				if scan, ok := who.(entities.RobotsData); ok { // robot
 					if err := r.ScannedRobotSend(conn, scan); err != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func (h *Handler) signUp(c *gin.Context) { // not task
@@ -20,6 +21,8 @@ func (h *Handler) signUp(c *gin.Context) { // not task
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	logrus.Print("sign-up successfuly")
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"id": id,
 	})
@@ -47,6 +50,7 @@ func (h *Handler) login(c *gin.Context) {
 		return
 	}
 
+	logrus.Print("sign-up successfuly")
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"token": token,
 		"user": map[string]interface{}{
