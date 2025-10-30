@@ -84,6 +84,13 @@ type Predictions struct {
 	ConfidenceScore   float64 `json:"confidence_score"`
 }
 
+type ProductWithHistory struct {
+	Product              models.Products           `json:"product"`
+	History              []models.InventoryHistory `json:"recent_scans"`
+	CurrentStock         int                       `json:"current_stock"`
+	AverageDaily         float64                   `json:"average_daily_consumption"`
+}
+
 type ImportResult struct {
 	SuccessCount int      `json:"success_count"`
 	FailedCount  int      `json:"failed_count"`
