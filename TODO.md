@@ -1,0 +1,4 @@
+- [x] Изменить middleware userIdentity в backend/internal/delivery/http/handler/middleware.go: добавить проверку c.Query("token") если заголовок пуст.
+- [x] Переписать frontend/src/services/websocket.ts: использовать WebSocket, URL с token, парсинг JSON.
+- [x] Удалить socket.io-client из frontend/package.json.
+- [ ] Протестировать WS соединение.

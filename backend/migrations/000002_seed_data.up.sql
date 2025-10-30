@@ -7,6 +7,7 @@ INSERT INTO products (id, name, category, min_stock, optimal_stock) VALUES
 
 
 INSERT INTO robots (id, status, battery_level) VALUES
+('IMPORT_SERVICE', 'active', 100),
 ('RB-001', 'active', 85),
 ('RB-002', 'active', 92),
 ('RB-003', 'active', 10),
