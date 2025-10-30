@@ -107,18 +107,18 @@ func (h *Handler) exportExcel(c *gin.Context) {
 	}
 	_ = userID
 
-	productIdStr := c.Query("ids")
-	if productIdStr == "" {
-		NewResponseError(c, http.StatusBadRequest, "product_id query parameter is required")
+	idsStr := c.Query("ids")
+	if idsStr == "" {
+		NewResponseError(c, http.StatusBadRequest, "ids query parameter is required")
 		return
 	}
 
-	productIDs := strings.Split(productIdStr, ",")
-	for i, id := range productIDs {
-		productIDs[i] = strings.TrimSpace(id)
+	ids := strings.Split(idsStr, ",")
+	for i, id := range ids {
+		ids[i] = strings.TrimSpace(id)
 	}
 
-	exelFile, err := h.services.Inventory.ExportExcel(productIDs)
+	exelFile, err := h.services.Inventory.ExportExcel(ids)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, "export failed: "+err.Error())
 		return
@@ -135,18 +135,18 @@ func (h *Handler) exportPDF(c *gin.Context) {
 	}
 	_ = userID
 
-	productIdStr := c.Query("ids")
-	if productIdStr == "" {
+	idsStr := c.Query("ids")
+	if idsStr == "" {
 		NewResponseError(c, http.StatusBadRequest, "ids query parameter is required")
 		return
 	}
 
-	productIDs := strings.Split(productIdStr, ",")
-	for i, id := range productIDs {
-		productIDs[i] = strings.TrimSpace(id)
+	ids := strings.Split(idsStr, ",")
+	for i, id := range ids {
+		ids[i] = strings.TrimSpace(id)
 	}
 
-	pdfFile, err := h.services.Inventory.ExportPDF(productIDs)
+	pdfFile, err := h.services.Inventory.ExportPDF(ids)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, "export failed: "+err.Error())
 		return

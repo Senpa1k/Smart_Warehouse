@@ -107,8 +107,8 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 	}, nil
 }
 
-func (s *InventoryService) ExportExcel(productIDs []string) ([]byte, error) {
-	histories, err := s.repo.GetInventoryHistoryByProductIDs(productIDs)
+func (s *InventoryService) ExportExcel(ids []string) ([]byte, error) {
+	histories, err := s.repo.GetInventoryHistoryByIDs(ids)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory history: %w", err)
 	}
@@ -145,8 +145,8 @@ func (s *InventoryService) ExportExcel(productIDs []string) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func (s *InventoryService) ExportPDF(productIDs []string) ([]byte, error) {
-	histories, err := s.repo.GetInventoryHistoryByProductIDs(productIDs)
+func (s *InventoryService) ExportPDF(ids []string) ([]byte, error) {
+	histories, err := s.repo.GetInventoryHistoryByIDs(ids)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory history: %w", err)
 	}

@@ -26,6 +26,12 @@ func (r *InventoryRepo) GetInventoryHistoryByProductIDs(productIDs []string) ([]
 	return histories, err
 }
 
+func (r *InventoryRepo) GetInventoryHistoryByIDs(ids []string) ([]models.InventoryHistory, error) {
+	var histories []models.InventoryHistory
+	err := r.db.Preload("Robot").Preload("Product").Where("id IN ?", ids).Find(&histories).Error
+	return histories, err
+}
+
 func (r *InventoryRepo) GetProductByID(productID string) error {
 	var product models.Products
 	return r.db.First(&product, "id = ?", productID).Error
