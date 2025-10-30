@@ -127,6 +127,34 @@ func (h *Handler) exportExcel(c *gin.Context) {
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", exelFile)
 }
 
+func (h *Handler) exportPDF(c *gin.Context) {
+	userID, ok := c.Get(userCtx)
+	if !ok {
+		NewResponseError(c, http.StatusUnauthorized, "user not authenticated")
+		return
+	}
+	_ = userID
+
+	productIdStr := c.Query("ids")
+	if productIdStr == "" {
+		NewResponseError(c, http.StatusBadRequest, "ids query parameter is required")
+		return
+	}
+
+	productIDs := strings.Split(productIdStr, ",")
+	for i, id := range productIDs {
+		productIDs[i] = strings.TrimSpace(id)
+	}
+
+	pdfFile, err := h.services.Inventory.ExportPDF(productIDs)
+	if err != nil {
+		NewResponseError(c, http.StatusInternalServerError, "export failed: "+err.Error())
+		return
+	}
+	c.Header("Content-Disposition", "attachment; filename=inventory.pdf")
+	c.Data(http.StatusOK, "application/pdf", pdfFile)
+}
+
 func (h *Handler) importInventory(c *gin.Context) {
 	userID, ok := c.Get(userCtx)
 	if !ok {

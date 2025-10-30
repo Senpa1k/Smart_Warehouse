@@ -25,6 +25,7 @@ type WebsocketDashBoard interface {
 type Inventory interface {
 	ImportCSV(csvData io.Reader) (*entities.ImportResult, error)
 	ExportExcel(productIDs []string) ([]byte, error)
+	ExportPDF(productIDs []string) ([]byte, error)
 	GetHistory(from, to, zone, status string, limit, offset int) (*entities.HistoryResponse, error)
 }
 

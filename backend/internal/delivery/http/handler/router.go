@@ -53,6 +53,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		export := api.Group("/export", h.userIdentity)
 		{
 			export.GET("/excel", h.exportExcel)
+			export.GET("/pdf", h.exportPDF)
 		}
 		dashboard := api.Group("/dashboard", h.userIdentity)
 		{

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/jung-kurt/gofpdf"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -141,6 +143,70 @@ func (s *InventoryService) ExportExcel(productIDs []string) ([]byte, error) {
 		return nil, err
 	}
 	return buffer.Bytes(), nil
+}
+
+func (s *InventoryService) ExportPDF(productIDs []string) ([]byte, error) {
+	histories, err := s.repo.GetInventoryHistoryByProductIDs(productIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory history: %w", err)
+	}
+
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.AddPage()
+
+	// Title
+	pdf.SetFont("Arial", "B", 16)
+	pdf.CellFormat(280, 10, "Inventory History Report", "", 1, "C", false, 0, "")
+	pdf.Ln(5)
+
+	// Table headers
+	pdf.SetFont("Arial", "B", 8)
+	pdf.SetFillColor(200, 220, 255)
+
+	headers := []struct {
+		width float64
+		text  string
+	}{
+		{15, "ID"},
+		{25, "Robot ID"},
+		{30, "Product ID"},
+		{50, "Product Name"},
+		{20, "Quantity"},
+		{20, "Zone"},
+		{15, "Row"},
+		{15, "Shelf"},
+		{25, "Status"},
+		{40, "Scanned At"},
+	}
+
+	for _, header := range headers {
+		pdf.CellFormat(header.width, 7, header.text, "1", 0, "C", true, 0, "")
+	}
+	pdf.Ln(-1)
+
+	// Table data
+	pdf.SetFont("Arial", "", 7)
+	for _, history := range histories {
+		pdf.CellFormat(15, 6, fmt.Sprintf("%d", history.ID), "1", 0, "L", false, 0, "")
+		pdf.CellFormat(25, 6, history.RobotID, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(30, 6, history.ProductID, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(50, 6, history.Product.Name, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(20, 6, fmt.Sprintf("%d", history.Quantity), "1", 0, "C", false, 0, "")
+		pdf.CellFormat(20, 6, history.Zone, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(15, 6, fmt.Sprintf("%d", history.RowNumber), "1", 0, "C", false, 0, "")
+		pdf.CellFormat(15, 6, fmt.Sprintf("%d", history.ShelfNumber), "1", 0, "C", false, 0, "")
+		pdf.CellFormat(25, 6, history.Status, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(40, 6, history.ScannedAt.Format("2006-01-02 15:04"), "1", 0, "C", false, 0, "")
+		pdf.Ln(-1)
+	}
+
+	var buf bytes.Buffer
+	err = pdf.Output(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offset int) (*entities.HistoryResponse, error) {
