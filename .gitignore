@@ -39,8 +39,8 @@ pgdata/
 *.dll
 *.so
 *.dylib
-main
-migrator
+
+
 
 # Test binary, built with `go test -c`
 *.test
