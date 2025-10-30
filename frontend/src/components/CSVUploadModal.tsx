@@ -33,9 +33,9 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState<{
-    success: number;
-    failed: number;
-    errors: string[];
+    success_count: number;
+    failed_count: number;
+    errors: string[] | null;
   } | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -48,9 +48,16 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
+        if (!text) {
+          console.error('Failed to read file content');
+          return;
+        }
         const lines = text.split('\n').slice(0, 6); // Header + 5 rows
         const parsedLines = lines.map((line) => line.split(';'));
         setPreview(parsedLines);
+      };
+      reader.onerror = () => {
+        console.error('Error reading file');
       };
       reader.readAsText(uploadedFile);
     }
@@ -82,7 +89,7 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
       setUploadProgress(100);
       setUploadResult(result);
 
-      if (result.failed === 0) {
+      if (result.failed_count === 0) {
         setTimeout(() => {
           onSuccess();
           handleClose();
@@ -90,8 +97,8 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
       }
     } catch (error: any) {
       setUploadResult({
-        success: 0,
-        failed: 1,
+        success_count: 0,
+        failed_count: 1,
         errors: [error.message || 'Ошибка загрузки файла']
       });
     } finally {
@@ -210,16 +217,16 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
         {/* Upload Result */}
         {uploadResult && (
           <Box sx={{ mt: 2 }}>
-            {uploadResult.failed === 0 ? (
+            {uploadResult.failed_count === 0 ? (
               <Alert severity="success" icon={<CheckCircle />}>
-                Успешно загружено {uploadResult.success} записей!
+                Успешно загружено {uploadResult.success_count} записей!
               </Alert>
             ) : (
               <>
                 <Alert severity="warning" icon={<ErrorIcon />} sx={{ mb: 2 }}>
-                  Загружено: {uploadResult.success} | Ошибок: {uploadResult.failed}
+                  Загружено: {uploadResult.success_count} | Ошибок: {uploadResult.failed_count}
                 </Alert>
-                {uploadResult.errors.length > 0 && (
+                {uploadResult.errors && uploadResult.errors.length > 0 && (
                   <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Ошибки:
@@ -239,7 +246,7 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
 
       <DialogActions>
         <Button onClick={handleClose}>
-          {uploadResult?.failed === 0 ? 'Закрыть' : 'Отмена'}
+          {uploadResult?.failed_count === 0 ? 'Закрыть' : 'Отмена'}
         </Button>
         {file && !uploadResult && (
           <Button
@@ -250,7 +257,7 @@ const CSVUploadModal: React.FC<CSVUploadModalProps> = ({ open, onClose, onSucces
             Загрузить
           </Button>
         )}
-        {uploadResult && uploadResult.failed > 0 && (
+        {uploadResult && uploadResult.failed_count > 0 && (
           <Button
             variant="outlined"
             onClick={() => {

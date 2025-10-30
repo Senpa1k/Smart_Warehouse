@@ -26,6 +26,12 @@ func (r *InventoryRepo) GetInventoryHistoryByProductIDs(productIDs []string) ([]
 	return histories, err
 }
 
+func (r *InventoryRepo) GetInventoryHistoryByScanIDs(scanIDs []string) ([]models.InventoryHistory, error) {
+	var histories []models.InventoryHistory
+	err := r.db.Preload("Robot").Preload("Product").Where("id IN ?", scanIDs).Find(&histories).Error
+	return histories, err
+}
+
 func (r *InventoryRepo) GetProductByID(productID string) error {
 	var product models.Products
 	return r.db.First(&product, "id = ?", productID).Error
@@ -41,7 +47,7 @@ func (r *InventoryRepo) UpdateProduct(product *models.Products) error {
 
 func parseDateTime(dateStr string) (time.Time, error) {
 	dateStr = strings.TrimSpace(dateStr)
-	
+
 	// Try different date formats
 	formats := []string{
 		time.RFC3339,           // 2006-01-02T15:04:05Z07:00
@@ -50,7 +56,7 @@ func parseDateTime(dateStr string) (time.Time, error) {
 		"2006-01-02 15:04:05",  // Space separated
 		"2006-01-02",           // Date only
 	}
-	
+
 	var lastErr error
 	for _, format := range formats {
 		if t, err := time.Parse(format, dateStr); err == nil {
@@ -59,7 +65,7 @@ func parseDateTime(dateStr string) (time.Time, error) {
 			lastErr = err
 		}
 	}
-	
+
 	return time.Time{}, lastErr
 }
 

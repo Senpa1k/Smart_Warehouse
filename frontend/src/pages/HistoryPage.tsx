@@ -72,7 +72,10 @@ const HistoryPage: React.FC = () => {
 
     setExporting(true);
     try {
-      const blob = await apiService.exportToExcel(selectedItems);
+      // Передаем ID выбранных записей
+      const selectedScanIds = selectedItems.map(id => id.toString());
+
+      const blob = await apiService.exportToExcel(selectedScanIds);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -97,7 +100,10 @@ const HistoryPage: React.FC = () => {
 
     setExporting(true);
     try {
-      const blob = await apiService.exportToPDF(selectedItems);
+      // Передаем ID выбранных записей
+      const selectedScanIds = selectedItems.map(id => id.toString());
+
+      const blob = await apiService.exportToPDF(selectedScanIds);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

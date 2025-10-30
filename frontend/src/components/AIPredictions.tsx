@@ -11,8 +11,6 @@ import {
   Chip
 } from '@mui/material';
 import { Refresh, TrendingDown } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { AIPrediction } from '../types';
 
 interface AIPredictionsProps {
@@ -45,6 +43,7 @@ const AIPredictions: React.FC<AIPredictionsProps> = ({
           </Box>
         </Box>
         <Button
+          type="button"
           variant="outlined"
           size="small"
           startIcon={<Refresh />}
@@ -72,9 +71,6 @@ const AIPredictions: React.FC<AIPredictionsProps> = ({
               <Box sx={{ width: '100%', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                   <TrendingDown color="error" fontSize="small" />
-                  <Typography variant="body2" fontWeight="bold">
-                    {prediction.product_name}
-                  </Typography>
                 </Box>
                 <Typography variant="caption" color="text.secondary">
                   {prediction.product_id}
@@ -92,21 +88,19 @@ const AIPredictions: React.FC<AIPredictionsProps> = ({
               >
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    Текущий остаток:
+                    Дней до исчерпания:
                   </Typography>
                   <Typography variant="body2" fontWeight="bold">
-                    {prediction.current_stock} ед.
+                    {prediction.days_until_stockout} дней
                   </Typography>
                 </Box>
 
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    Дата исчерпания:
+                    Дата прогноза:
                   </Typography>
                   <Typography variant="body2" fontWeight="bold" color="error">
-                    {format(parseISO(prediction.predicted_stockout_date), 'd MMMM', {
-                      locale: ru
-                    })}
+                    {prediction.prediction_date}
                   </Typography>
                 </Box>
 
@@ -115,7 +109,7 @@ const AIPredictions: React.FC<AIPredictionsProps> = ({
                     Рекомендуется заказать:
                   </Typography>
                   <Typography variant="body2" fontWeight="bold" color="primary">
-                    {prediction.recommended_order_quantity} ед.
+                    {prediction.recommended_order} ед.
                   </Typography>
                 </Box>
               </Box>

@@ -109,7 +109,7 @@ func (h *Handler) exportExcel(c *gin.Context) {
 
 	productIdStr := c.Query("ids")
 	if productIdStr == "" {
-		NewResponseError(c, http.StatusBadRequest, "product_id query parameter is required")
+		NewResponseError(c, http.StatusBadRequest, "ids query parameter is required")
 		return
 	}
 

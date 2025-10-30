@@ -58,11 +58,19 @@ const dashboardSlice = createSlice({
         state.robots.push(action.payload);
       }
     },
+    updateRobots: (state, action: PayloadAction<Robot[]>) => {
+      state.robots = action.payload;
+    },
     addRecentScan: (state, action: PayloadAction<InventoryScan>) => {
       state.recentScans.unshift(action.payload);
       if (state.recentScans.length > 20) {
         state.recentScans.pop();
       }
+    },
+    addInventoryAlert: (state, action: PayloadAction<any>) => {
+      state;
+      // Handle inventory alerts if needed - can be extended later
+      console.log('Inventory alert:', action.payload);
     },
 
     clearError: (state) => {
@@ -113,5 +121,5 @@ const dashboardSlice = createSlice({
   }
 });
 
-export const { updateRobot, addRecentScan, clearError } = dashboardSlice.actions;
+export const { updateRobot, updateRobots, addRecentScan, addInventoryAlert, clearError } = dashboardSlice.actions;
 export default dashboardSlice.reducer;

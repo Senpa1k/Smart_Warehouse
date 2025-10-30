@@ -11,7 +11,9 @@ import {
   fetchDashboardData,
   fetchAIPredictions,
   updateRobot,
-  addRecentScan
+  updateRobots,
+  addRecentScan,
+  addInventoryAlert
 } from '../store/slices/dashboardSlice';
 import { wsService } from '../services/websocket';
 import type { Robot, InventoryScan } from '../types';
@@ -46,6 +48,11 @@ const DashboardPage: React.FC = () => {
       dispatch(updateRobot(data));
     });
 
+    // Listen for robots list updates
+    wsService.on('robots_update', (data: Robot[]) => {
+      dispatch(updateRobots(data));
+    });
+
     // Listen for new scans
     wsService.on('new_scan', (data: InventoryScan) => {
       dispatch(addRecentScan(data));
@@ -53,7 +60,9 @@ const DashboardPage: React.FC = () => {
 
     // Listen for inventory alerts
     wsService.on('inventory_alert', (data: any) => {
-      setAlertMessage(`Критический остаток: ${data.product_name} (${data.quantity} ед.)`);
+      const alertData = data.data || data;
+      dispatch(addInventoryAlert(alertData));
+      setAlertMessage(alertData.message || `Критический остаток: ${alertData.product_name} (${alertData.current_quantity} ед.)`);
       setAlertOpen(true);
     });
 

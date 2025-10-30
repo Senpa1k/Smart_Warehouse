@@ -74,7 +74,7 @@ services:
     environment:
       API_URL: http://backend:3000
       ROBOTS_COUNT: 5
-      UPDATE_INTERVAL: 120  # секунды (2 минуты для реалистичных данных)
+      UPDATE_INTERVAL: 10  # секунды (2 минуты для реалистичных данных)
     depends_on:
       - backend
     restart: unless-stopped

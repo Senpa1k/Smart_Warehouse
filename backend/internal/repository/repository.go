@@ -22,6 +22,7 @@ type WebsocketDashBoard interface {
 type Inventory interface {
 	ImportInventoryHistories(histories []models.InventoryHistory) error
 	GetInventoryHistoryByProductIDs(productIDs []string) ([]models.InventoryHistory, error)
+	GetInventoryHistoryByScanIDs(scanIDs []string) ([]models.InventoryHistory, error)
 	GetProductByID(productID string) error
 	CreateProduct(product *models.Products) error
 	UpdateProduct(product *models.Products) error

@@ -19,7 +19,6 @@ func (h *Handler) userIdentity(c *gin.Context) {
 	header := c.GetHeader(authorizationHeader)
 	token := ""
 	if header == "" {
-		// Для WebSocket, проверяем query параметр token
 		token = c.Query("token")
 		if token == "" {
 			NewResponseError(c, http.StatusUnauthorized, "empty auth header or token")

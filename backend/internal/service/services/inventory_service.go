@@ -105,8 +105,8 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 	}, nil
 }
 
-func (s *InventoryService) ExportExcel(productIDs []string) ([]byte, error) {
-	histories, err := s.repo.GetInventoryHistoryByProductIDs(productIDs)
+func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
+	histories, err := s.repo.GetInventoryHistoryByScanIDs(scanIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory history: %w", err)
 	}

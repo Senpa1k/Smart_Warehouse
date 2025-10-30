@@ -164,7 +164,7 @@ class RobotEmulator:
 
     def run(self):
         """Основной цикл работы робота"""
-        update_interval = int(os.getenv('UPDATE_INTERVAL', 60))
+        update_interval = int(os.getenv('UPDATE_INTERVAL', 10))
 
         while True:
             try:

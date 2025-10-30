@@ -128,17 +128,17 @@ class APIService {
   }
 
   // Export endpoints
-  async exportToExcel(ids: number[]): Promise<Blob> {
+  async exportToExcel(productIds: string[]): Promise<Blob> {
     const response = await this.api.get('/export/excel', {
-      params: { ids: ids.join(',') },
+      params: { ids: productIds.join(',') },
       responseType: 'blob'
     });
     return response.data;
   }
 
-  async exportToPDF(ids: number[]): Promise<Blob> {
+  async exportToPDF(productIds: string[]): Promise<Blob> {
     const response = await this.api.get('/export/pdf', {
-      params: { ids: ids.join(',') },
+      params: { product_ids: productIds.join(',') },
       responseType: 'blob'
     });
     return response.data;

@@ -62,13 +62,11 @@ export interface DashboardStats {
 // AI Prediction types
 export interface AIPrediction {
   product_id: string;
-  product_name: string;
-  current_stock: number;
-  predicted_stockout_date: string;
-  recommended_order_quantity: number;
+  prediction_date: string;
+  days_until_stockout: number;
+  recommended_order: number;
   confidence_score: number;
 }
-
 
 
 // Filter types for History page
@@ -83,9 +81,9 @@ export interface HistoryFilters {
 
 // CSV Upload types
 export interface CSVUploadResult {
-  success: number;
-  failed: number;
-  errors: string[];
+  success_count: number;
+  failed_count: number;
+  errors: string[] | null;
 }
 
 // Pagination types

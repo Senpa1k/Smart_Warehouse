@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Paper, Typography, IconButton, Tooltip } from '@mui/material';
 import { ZoomIn, ZoomOut, CenterFocusStrong } from '@mui/icons-material';
 import { Robot } from '../types';
@@ -10,6 +10,7 @@ interface WarehouseMapProps {
 const WarehouseMap: React.FC<WarehouseMapProps> = ({ robots }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [, forceUpdate] = useState(0);
 
   const zones = ['A', 'B', 'C', 'D', 'E'];
   const rows = 20;
@@ -25,6 +26,11 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ robots }) => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
+
+  // Force re-render when robots change
+  useEffect(() => {
+    forceUpdate(prev => prev + 1);
+  }, [robots]);
 
   const getRobotColor = (robot: Robot) => {
     if (robot.status === 'offline') return '#EF476F'; // Розовый
@@ -148,7 +154,7 @@ const WarehouseMap: React.FC<WarehouseMapProps> = ({ robots }) => {
                     fontWeight="bold"
                     fill="white"
                   >
-                    {robot.id.split('-')[1]}
+                    {robot.id && robot.id.split ? robot.id.split('-')[1] : robot.id}
                   </text>
                 </g>
               </Tooltip>
