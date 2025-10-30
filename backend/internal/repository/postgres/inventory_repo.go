@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -27,8 +28,17 @@ func (r *InventoryRepo) GetInventoryHistoryByProductIDs(productIDs []string) ([]
 }
 
 func (r *InventoryRepo) GetInventoryHistoryByIDs(ids []string) ([]models.InventoryHistory, error) {
+	// Convert string IDs to integers
+	var intIDs []uint
+	for _, id := range ids {
+		var intID uint64
+		if _, err := fmt.Sscanf(id, "%d", &intID); err == nil {
+			intIDs = append(intIDs, uint(intID))
+		}
+	}
+
 	var histories []models.InventoryHistory
-	err := r.db.Preload("Robot").Preload("Product").Where("id IN ?", ids).Find(&histories).Error
+	err := r.db.Preload("Robot").Preload("Product").Where("id IN ?", intIDs).Find(&histories).Error
 	return histories, err
 }
 
