@@ -12,13 +12,6 @@ type DashPostgres struct {
 	db *gorm.DB
 }
 
-type Statistics struct {
-	TotalCheck        int `json:"total_check"`
-	UniqueProducts    int `json:"unique_products"`
-	FindDiscrepancies int `json:"find_discrepancies"`
-	AverageTime       int `json:"average_time"`
-}
-
 func NewDashPostgres(db *gorm.DB) *DashPostgres {
 	return &DashPostgres{db: db}
 }
@@ -38,52 +31,58 @@ func (d *DashPostgres) GetDashInfo(dash *entities.DashInfo) error {
 		return fmt.Errorf("failed to get recent scans: %w", err)
 	}
 
-	dash.ListScans = [100]models.InventoryHistory{}
-
-	for i, scan := range scans {
-		if i >= 100 {
-			break
-		}
-		dash.ListScans[i] = scan
-	}
+	// Присваиваем только реальные данные, без пустых записей
+	dash.ListScans = scans
 
 	return d.getStatistics(&dash.Statistics)
 }
 
 func (d *DashPostgres) getStatistics(statistics *entities.Statistics) error {
-	// Общее количество проверок
-	var totalCheck int64
-	if err := d.db.Model(&models.InventoryHistory{}).Count(&totalCheck).Error; err != nil {
-		return fmt.Errorf("failed to count total checks: %w", err)
+	// Общее количество роботов
+	var totalRobots int64
+	if err := d.db.Model(&models.Robots{}).Count(&totalRobots).Error; err != nil {
+		return fmt.Errorf("failed to count total robots: %w", err)
 	}
-	statistics.TotalCheck = int(totalCheck)
+	statistics.TotalRobots = int(totalRobots)
 
-	var uniqueProducts int64
+	// Активные роботы
+	var activeRobots int64
+	if err := d.db.Model(&models.Robots{}).
+		Where("status = ?", "active").
+		Count(&activeRobots).Error; err != nil {
+		return fmt.Errorf("failed to count active robots: %w", err)
+	}
+	statistics.ActiveRobots = int(activeRobots)
+
+	// Количество проверенных элементов сегодня
+	var itemsToday int64
 	if err := d.db.Model(&models.InventoryHistory{}).
-		Distinct("product_id").
-		Count(&uniqueProducts).Error; err != nil {
-		return fmt.Errorf("failed to count unique products: %w", err)
+		Where("DATE(scanned_at) = CURRENT_DATE").
+		Count(&itemsToday).Error; err != nil {
+		return fmt.Errorf("failed to count items checked today: %w", err)
 	}
-	statistics.UniqueProducts = int(uniqueProducts)
+	statistics.ItemsCheckedToday = int(itemsToday)
 
-	var discrepancies int64 // расхождения?
-	// if err := d.db.Model(&models.InventoryHistory{}).
-	// 	Where("status = ?", "discrepancy").
-	// 	Count(&discrepancies).Error; err != nil {
-	// 	return fmt.Errorf("failed to count discrepancies: %w", err)
-	// }
-	statistics.FindDiscrepancies = int(discrepancies)
+	// Критичные элементы (статус CRITICAL)
+	var criticalItems int64
+	if err := d.db.Model(&models.InventoryHistory{}).
+		Where("status = ?", "CRITICAL").
+		Count(&criticalItems).Error; err != nil {
+		return fmt.Errorf("failed to count critical items: %w", err)
+	}
+	statistics.CriticalItems = int(criticalItems)
 
-	var avgTime float64
-	row := d.db.Table("inventory_histories").
-		Select("AVG(EXTRACT(EPOCH FROM (scanned_at - created_at)))").
-		Where("scanned_at > created_at").
+	// Средний заряд батареи роботов
+	var avgBattery float64
+	row := d.db.Table("robots").
+		Select("AVG(battery_level)").
+		Where("battery_level IS NOT NULL").
 		Row()
 
-	if err := row.Scan(&avgTime); err != nil {
-		statistics.AverageTime = 0
+	if err := row.Scan(&avgBattery); err != nil {
+		statistics.AvgBattery = 0
 	} else {
-		statistics.AverageTime = int(avgTime)
+		statistics.AvgBattery = avgBattery
 	}
 
 	return nil

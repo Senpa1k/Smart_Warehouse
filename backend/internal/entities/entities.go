@@ -27,16 +27,17 @@ type ScanResults struct {
 }
 
 type DashInfo struct {
-	ListRobots []models.Robots              `json:"robots"`
-	ListScans  [100]models.InventoryHistory `json:"recent_scans"`
-	Statistics Statistics                   `json:"statistics"`
+	ListRobots []models.Robots             `json:"robots"`
+	ListScans  []models.InventoryHistory   `json:"recent_scans"`
+	Statistics Statistics                  `json:"statistics"`
 }
 
 type Statistics struct {
-	TotalCheck        int `json:"total_check"`
-	UniqueProducts    int `json:"unique_products"`
-	FindDiscrepancies int `json:"find _discrepancies"`
-	AverageTime       int `json:"average_time"`
+	ActiveRobots      int     `json:"active_robots"`
+	TotalRobots       int     `json:"total_robots"`
+	ItemsCheckedToday int     `json:"items_checked_today"`
+	CriticalItems     int     `json:"critical_items"`
+	AvgBattery        float64 `json:"avg_battery"`
 }
 
 type InventoryAlert struct {
@@ -97,8 +98,8 @@ type HistoryResponse struct {
 }
 
 type HistoryQuery struct {
-	From   string `form:"from" binding:"required"`
-	To     string `form:"to" binding:"required"`
+	From   string `form:"from"`
+	To     string `form:"to"`
 	Zone   string `form:"zone"`
 	Status string `form:"status"`
 	Limit  int    `form:"limit"`

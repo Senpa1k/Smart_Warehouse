@@ -61,10 +61,22 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       // Logout
+      .addCase(logout.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
+        state.loading = false;
+        localStorage.removeItem('token');
+      })
+      .addCase(logout.rejected, (state) => {
+        // Even if logout API fails, clear local state
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        state.loading = false;
         localStorage.removeItem('token');
       });
   }

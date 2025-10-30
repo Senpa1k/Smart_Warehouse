@@ -7,14 +7,14 @@ import DashboardPage from './pages/DashboardPage';
 import HistoryPage from './pages/HistoryPage';
 
 // Protected Route Component
-// ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ДЕМОНСТРАЦИИ UI БЕЗ BACKEND
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // const { isAuthenticated } = useAppSelector((state) => state.auth);
+import { useAppSelector } from './store/hooks';
 
-  // Временно разрешаем доступ без авторизации для демо
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" replace />;
-  // }
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return <>{children}</>;
 };
