@@ -47,15 +47,19 @@ services:
     volumes:
       - ./uploads:/app/uploads
 
-  # frontend:
-  #   build: ./frontend
-  #   environment:
-  #     REACT_APP_API_URL: ${VITE_API_URL}
-  #     REACT_APP_WS_URL: ${VITE_WS_URL}
-  #   ports:
-  #     - "80:80"
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_WS_URL: ${VITE_WS_URL}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
   # robot_emulator:
   #   build: ./robot_emulator
