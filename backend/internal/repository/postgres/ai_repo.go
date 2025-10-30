@@ -74,21 +74,28 @@ func (ai *AIPostgres) AIRequest(rq entities.AIRequest) (*[]entities.ProductWithH
 
 func (ai *AIPostgres) AIResponse(rp entities.AIResponse) error {
 	for _, elem := range rp.Predictions {
-		predictionDate, err := time.Parse("02.01.2006", elem.PredictionDate)
+		// Parse predicted stockout date (ISO 8601 format)
+		stockoutDate, err := time.Parse("2006-01-02", elem.PredictedStockoutDate)
 		if err != nil {
-			// Try alternative format
-			predictionDate, err = time.Parse("2006-01-02", elem.PredictionDate)
+			// Try alternative formats
+			stockoutDate, err = time.Parse("02.01.2006", elem.PredictedStockoutDate)
 			if err != nil {
-				// Use current date if parsing fails
-				predictionDate = time.Now()
+				// Use current date + 7 days if parsing fails
+				stockoutDate = time.Now().AddDate(0, 0, 7)
 			}
+		}
+
+		// Calculate days until stockout from today
+		daysUntilStockout := int(time.Until(stockoutDate).Hours() / 24)
+		if daysUntilStockout < 0 {
+			daysUntilStockout = 0
 		}
 
 		var prediction models.AiPrediction = models.AiPrediction{
 			ProductID:         elem.ProductID,
-			PredictionDate:    predictionDate,
-			DaysUntilStockout: elem.DaysUntilStockout,
-			RecommendedOrder:  elem.RecommendedOrder,
+			PredictionDate:    time.Now(),
+			DaysUntilStockout: daysUntilStockout,
+			RecommendedOrder:  elem.RecommendedOrderQuantity,
 			ConfidenceScore:   elem.ConfidenceScore,
 		}
 

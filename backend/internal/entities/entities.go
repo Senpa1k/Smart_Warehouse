@@ -73,15 +73,16 @@ type AIRequest struct {
 
 type AIResponse struct {
 	Predictions []Predictions `json:"predictions"`
-	Confidence  float64       `json:"confidience"`
+	Confidence  float64       `json:"confidence"`
 }
 
 type Predictions struct {
-	ProductID         string  `json:"product_id"`
-	PredictionDate    string  `json:"prediction_date"`
-	DaysUntilStockout int     `json:"days_until_stockout"`
-	RecommendedOrder  int     `json:"recommended_order"`
-	ConfidenceScore   float64 `json:"confidence_score"`
+	ProductID                string  `json:"product_id"`
+	ProductName              string  `json:"product_name"`
+	CurrentStock             int     `json:"current_stock"`
+	PredictedStockoutDate    string  `json:"predicted_stockout_date"`
+	RecommendedOrderQuantity int     `json:"recommended_order_quantity"`
+	ConfidenceScore          float64 `json:"confidence_score"`
 }
 
 type ProductWithHistory struct {

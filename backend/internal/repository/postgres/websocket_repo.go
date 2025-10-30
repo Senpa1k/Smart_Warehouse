@@ -52,34 +52,40 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 		return fmt.Errorf("failed to get product: %w", err)
 	}
 
-	var currentQuantity int
-	if err := w.db.Table("inventory_history").Where("product_id = ?", predict.ProductID).Select("COALESCE(quantity, 0)").Scan(&currentQuantity).Error; err != nil {
-		return fmt.Errorf("failed to get quantity: %w", err)
+	// Parse predicted stockout date to calculate days until stockout
+	stockoutDate, err := time.Parse("2006-01-02", predict.PredictedStockoutDate)
+	if err != nil {
+		return fmt.Errorf("failed to parse stockout date: %w", err)
+	}
+
+	daysUntilStockout := int(time.Until(stockoutDate).Hours() / 24)
+	if daysUntilStockout < 0 {
+		daysUntilStockout = 0
 	}
 
 	alertType := "predicted"
 	message := ""
 
 	switch {
-	case predict.DaysUntilStockout <= 2:
-		message = fmt.Sprintf("КРИТИЧЕСКИЙ УРОВЕНЬ! Товар закончится через %d дней", predict.DaysUntilStockout)
-	case predict.DaysUntilStockout <= 7:
-		message = fmt.Sprintf("Рекомендуется пополнение. Товар закончится через %d дней", predict.DaysUntilStockout)
+	case daysUntilStockout <= 2:
+		message = fmt.Sprintf("КРИТИЧЕСКИЙ УРОВЕНЬ! Товар закончится через %d дней", daysUntilStockout)
+	case daysUntilStockout <= 7:
+		message = fmt.Sprintf("Рекомендуется пополнение. Товар закончится через %d дней", daysUntilStockout)
 	default:
 		return fmt.Errorf("everything norm")
 	}
 
 	status := "OK"
-	if currentQuantity <= product.MinStock {
+	if predict.CurrentStock <= product.MinStock {
 		status = "CRITICAL"
-	} else if currentQuantity <= product.OptimalStock/2 {
+	} else if predict.CurrentStock <= product.OptimalStock/2 {
 		status = "LOW_STOCK"
 	}
 
 	enti.Type = "inventory_alert"
 	enti.Data.ProductId = predict.ProductID
-	enti.Data.ProductName = product.Name
-	enti.Data.CurrentQuantity = currentQuantity
+	enti.Data.ProductName = predict.ProductName
+	enti.Data.CurrentQuantity = predict.CurrentStock
 	enti.Data.Zone = ""
 	enti.Data.Row = 0
 	enti.Data.Shelf = 0
@@ -89,7 +95,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 	enti.Data.Message = fmt.Sprintf(
 		"%s. Рекомендуемый заказ: %d единиц. Уверенность прогноза: %.1f%%",
 		message,
-		predict.RecommendedOrder,
+		predict.RecommendedOrderQuantity,
 		predict.ConfidenceScore*100,
 	)
 

@@ -77,26 +77,31 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 3. Учти среднее ежедневное потребление (average_daily_consumption)
 4. Учти минимальный запас (min_stock) и оптимальный запас (optimal_stock)
 5. Спрогнозируй:
-   - Через сколько дней закончатся запасы (days_until_stockout)
-   - Рекомендуемое количество для заказа (recommended_order) - должно быть >= optimal_stock
+   - Дату когда закончатся запасы (predicted_stockout_date) в формате ISO 8601 (YYYY-MM-DD)
+   - Рекомендуемое количество для заказа (recommended_order_quantity) - должно быть >= optimal_stock
    - Достоверность прогноза (confidence_score) от 0.0 до 1.0
 
-Верни ответ СТРОГО в формате JSON (prediction_date в формате dd.mm.yyyy):
+Верни ответ СТРОГО в формате JSON:
 {
   "predictions": [
     {
       "product_id": "TEL-4567",
-      "prediction_date": "%s",
-      "days_until_stockout": 15,
-      "recommended_order": 100,
+      "product_name": "Телефон IP Cisco 7841",
+      "current_stock": 45,
+      "predicted_stockout_date": "2025-11-15",
+      "recommended_order_quantity": 100,
       "confidence_score": 0.85
     }
   ],
   "confidence": 0.85
 }
 
-ВАЖНО: Верни ТОЛЬКО JSON, без дополнительного текста, markdown или объяснений.`, 
-			string(assistantRequest), todayStr, rq.PeriodDays, todayStr)},
+ВАЖНО:
+- Верни ТОЛЬКО JSON, без дополнительного текста, markdown или объяснений
+- predicted_stockout_date должна быть в формате ISO 8601: YYYY-MM-DD
+- product_name берется из поля product.name
+- current_stock берется из поля current_stock`,
+			string(assistantRequest), todayStr, rq.PeriodDays)},
 	}
 
 	resp, err := model.Generate(ctx, messages)
