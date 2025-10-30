@@ -10,7 +10,6 @@ interface DashboardState {
   aiConfidence: number;
   loading: boolean;
   error: string | null;
-  wsConnected: boolean;
 }
 
 const initialState: DashboardState = {
@@ -20,8 +19,7 @@ const initialState: DashboardState = {
   aiPredictions: [],
   aiConfidence: 0,
   loading: false,
-  error: null,
-  wsConnected: false
+  error: null
 };
 
 export const fetchDashboardData = createAsyncThunk(
@@ -66,9 +64,7 @@ const dashboardSlice = createSlice({
         state.recentScans.pop();
       }
     },
-    setWSConnected: (state, action: PayloadAction<boolean>) => {
-      state.wsConnected = action.payload;
-    },
+
     clearError: (state) => {
       state.error = null;
     }
@@ -117,5 +113,5 @@ const dashboardSlice = createSlice({
   }
 });
 
-export const { updateRobot, addRecentScan, setWSConnected, clearError } = dashboardSlice.actions;
+export const { updateRobot, addRecentScan, clearError } = dashboardSlice.actions;
 export default dashboardSlice.reducer;

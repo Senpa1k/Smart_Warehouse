@@ -69,11 +69,7 @@ export interface AIPrediction {
   confidence_score: number;
 }
 
-// WebSocket message types
-export interface WSMessage {
-  type: 'robot_update' | 'inventory_alert' | 'new_scan';
-  data: Robot | InventoryScan | any;
-}
+
 
 // Filter types for History page
 export interface HistoryFilters {

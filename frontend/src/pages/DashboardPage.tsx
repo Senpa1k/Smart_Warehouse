@@ -5,14 +5,13 @@ import WarehouseMap from '../components/WarehouseMap';
 import RealTimeStats from '../components/RealTimeStats';
 import RecentScansTable from '../components/RecentScansTable';
 import AIPredictions from '../components/AIPredictions';
-import WSIndicator from '../components/WSIndicator';
+
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   fetchDashboardData,
   fetchAIPredictions,
   updateRobot,
-  addRecentScan,
-  setWSConnected
+  addRecentScan
 } from '../store/slices/dashboardSlice';
 import { wsService } from '../services/websocket';
 import type { Robot, InventoryScan } from '../types';
@@ -38,11 +37,9 @@ const DashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  // WebSocket connection
+  // Polling for updates
   useEffect(() => {
     wsService.connect();
-
-    dispatch(setWSConnected(true));
 
     // Listen for robot updates
     wsService.on('robot_update', (data: Robot) => {
@@ -62,7 +59,6 @@ const DashboardPage: React.FC = () => {
 
     return () => {
       wsService.disconnect();
-      dispatch(setWSConnected(false));
     };
   }, [dispatch]);
 
@@ -128,9 +124,6 @@ const DashboardPage: React.FC = () => {
           </Grid>
         </Grid>
       </Container>
-
-      {/* WebSocket Indicator */}
-      <WSIndicator />
 
       {/* Alert Snackbar */}
       <Snackbar

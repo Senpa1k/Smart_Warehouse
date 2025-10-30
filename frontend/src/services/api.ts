@@ -122,7 +122,7 @@ class APIService {
   }> {
     const response = await this.api.post('/ai/predict', {
       period_days: periodDays,
-      categories: []
+      categories: ["network"]
     });
     return response.data;
   }

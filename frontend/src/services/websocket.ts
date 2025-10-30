@@ -1,56 +1,66 @@
-import { io, Socket } from 'socket.io-client';
-import type { WSMessage } from '../types';
+import { apiService } from './api';
 
-class WebSocketService {
-  private socket: Socket | null = null;
+class PollingService {
+  private pollingInterval: number | null = null;
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private lastRobotUpdate: string = '';
+  private lastScanUpdate: string = '';
 
-  connect(url?: string): void {
-    const wsUrl = url || import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
-    const token = localStorage.getItem('token');
-
-    this.socket = io(wsUrl, {
-      auth: {
-        token
-      },
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5
-    });
-
-    this.socket.on('connect', () => {
-      console.log('WebSocket connected');
-    });
-
-    this.socket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
-    });
-
-    this.socket.on('message', (message: WSMessage) => {
-      this.notifyListeners(message.type, message.data);
-    });
-
-    // Specific event handlers
-    this.socket.on('robot_update', (data) => {
-      this.notifyListeners('robot_update', data);
-    });
-
-    this.socket.on('inventory_alert', (data) => {
-      this.notifyListeners('inventory_alert', data);
-    });
-
-    this.socket.on('new_scan', (data) => {
-      this.notifyListeners('new_scan', data);
-    });
+  connect(): void {
+    console.log('Polling service started');
+    this.startPolling();
   }
 
   disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+    if (this.pollingInterval) {
+      window.clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
     }
     this.listeners.clear();
+  }
+
+  private startPolling(): void {
+    // Poll every 5 seconds for updates
+    this.pollingInterval = window.setInterval(async () => {
+      try {
+        await this.checkForUpdates();
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, 5000);
+  }
+
+  private async checkForUpdates(): Promise<void> {
+    try {
+      // Get current dashboard data
+      const data = await apiService.getDashboardData();
+
+      // Check for robot updates
+      const latestRobot = data.robots[0];
+      if (latestRobot && latestRobot.last_update !== this.lastRobotUpdate) {
+        this.lastRobotUpdate = latestRobot.last_update;
+        this.notifyListeners('robot_update', latestRobot);
+      }
+
+      // Check for new scans
+      const latestScan = data.recent_scans[0];
+      if (latestScan && latestScan.scanned_at !== this.lastScanUpdate) {
+        this.lastScanUpdate = latestScan.scanned_at;
+        this.notifyListeners('new_scan', latestScan);
+      }
+
+      // Check for inventory alerts (low stock items)
+      const alerts = data.recent_scans.filter(scan => scan.status !== 'OK');
+      alerts.forEach(alert => {
+        this.notifyListeners('inventory_alert', {
+          product_name: alert.product_name,
+          quantity: alert.quantity
+        });
+      });
+
+    } catch (error) {
+      console.error('Failed to poll for updates:', error);
+    }
   }
 
   on(event: string, callback: (data: any) => void): void {
@@ -75,14 +85,12 @@ class WebSocketService {
   }
 
   getConnectionStatus(): 'connected' | 'disconnected' | 'reconnecting' {
-    if (!this.socket) return 'disconnected';
-    if (this.socket.connected) return 'connected';
-    return 'reconnecting';
+    return this.pollingInterval ? 'connected' : 'disconnected';
   }
 
   isConnected(): boolean {
-    return this.socket?.connected || false;
+    return this.pollingInterval !== null;
   }
 }
 
-export const wsService = new WebSocketService();
+export const wsService = new PollingService();
