@@ -17,17 +17,24 @@ const (
 func (h *Handler) userIdentity(c *gin.Context) {
 
 	header := c.GetHeader(authorizationHeader)
+	token := ""
 	if header == "" {
-		NewResponseError(c, http.StatusUnauthorized, "empty auth header")
-		return
+		// Для WebSocket, проверяем query параметр token
+		token = c.Query("token")
+		if token == "" {
+			NewResponseError(c, http.StatusUnauthorized, "empty auth header or token")
+			return
+		}
+	} else {
+		headerParts := strings.Split(header, " ")
+		if len(headerParts) != 2 {
+			NewResponseError(c, http.StatusUnauthorized, "invalid number of auth")
+			return
+		}
+		token = headerParts[1]
 	}
 
-	headerParts := strings.Split(header, " ")
-	if len(headerParts) != 2 {
-		NewResponseError(c, http.StatusUnauthorized, "invalid number of auth")
-		return
-	}
-	userID, err := h.services.Authorization.ParseToken(headerParts[1])
+	userID, err := h.services.Authorization.ParseToken(token)
 	if err != nil {
 		NewResponseError(c, http.StatusUnauthorized, err.Error())
 		return

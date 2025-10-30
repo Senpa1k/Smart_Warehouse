@@ -68,14 +68,15 @@ services:
     depends_on:
       - backend
 
-  #robot_emulator:
-    #build: ./robot_emulator
-    #environment:
-      #API_URL: http://backend:3000
-      #ROBOTS_COUNT: 5
-      #UPDATE_INTERVAL: 10 # секунды
-    #depends_on:
-      #- backend
+  robot_emulator:
+    build: ./robot_emulator
+    environment:
+      API_URL: http://backend:3000
+      ROBOTS_COUNT: 5
+      UPDATE_INTERVAL: 120  # секунды (2 минуты для реалистичных данных)
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   postgres_data:

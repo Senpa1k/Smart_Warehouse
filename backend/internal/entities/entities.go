@@ -27,17 +27,17 @@ type ScanResults struct {
 }
 
 type DashInfo struct {
-	ListRobots []models.Robots             `json:"robots"`
-	ListScans  []models.InventoryHistory   `json:"recent_scans"`
-	Statistics Statistics                  `json:"statistics"`
+	ListRobots []models.Robots              `json:"robots"`
+	ListScans  [100]models.InventoryHistory `json:"recent_scans"`
+	Statistics Statistics                   `json:"statistics"`
 }
 
 type Statistics struct {
-	ActiveRobots      int     `json:"active_robots"`
-	TotalRobots       int     `json:"total_robots"`
-	ItemsCheckedToday int     `json:"items_checked_today"`
-	CriticalItems     int     `json:"critical_items"`
-	AvgBattery        float64 `json:"avg_battery"`
+	ActiveRobots      int `json:"active_robots"`
+	TotalRobots       int `json:"total_robots"`
+	ItemsCheckedToday int `json:"items_checked_today"`
+	CriticalItems     int `json:"critical_items"`
+	AvgBattery        int `json:"avg_battery"`
 }
 
 type InventoryAlert struct {
@@ -72,14 +72,16 @@ type AIRequest struct {
 }
 
 type AIResponse struct {
-	Predictions []struct {
-		ProductID         string  `json:"product_id"`
-		PredictionDate    string  `json:"prediction_date"`
-		DaysUntilStockout int     `json:"days_until_stockout"`
-		RecommendedOrder  int     `json:"recommended_order"`
-		ConfidenceScore   float64 `json:"confidence_score"`
-	} `json:"predictions"`
-	Confidence float64 `json:"confidience"`
+	Predictions []Predictions `json:"predictions"`
+	Confidence  float64       `json:"confidience"`
+}
+
+type Predictions struct {
+	ProductID         string  `json:"product_id"`
+	PredictionDate    string  `json:"prediction_date"`
+	DaysUntilStockout int     `json:"days_until_stockout"`
+	RecommendedOrder  int     `json:"recommended_order"`
+	ConfidenceScore   float64 `json:"confidence_score"`
 }
 
 type ImportResult struct {

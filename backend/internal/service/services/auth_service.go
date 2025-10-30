@@ -51,7 +51,7 @@ func (s *AuthService) ParseToken(accessToken string) (uint, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid signing method")
 		}
-		jwt_secret, _ := config.Get("jwt_secret") // jwt_secret будет доступен в контейнере
+		jwt_secret, _ := config.Get("JWT_SECRET") // jwt_secret будет доступен в контейнере
 
 		return []byte(jwt_secret), nil
 	})
@@ -70,7 +70,7 @@ func generateHashPassword(password string) string {
 	hash := sha1.New()
 	hash.Write([]byte(password))
 
-	salt, _ := config.Get("salt") // соль будет доступна в контейнере
+	salt, _ := config.Get("SALT") // соль будет доступна в контейнере
 
 	return fmt.Sprintf("%x", hash.Sum([]byte(salt)))
 }
@@ -84,7 +84,7 @@ func generateJWTToken(id uint) string {
 		id,
 	})
 
-	jwt_secret, _ := config.Get("jwt_secret") // jwt_secret будет доступен в контейнере
+	jwt_secret, _ := config.Get("JWT_SECRET")
 	str, _ := token.SignedString([]byte(jwt_secret))
 	return str
 }

@@ -16,6 +16,12 @@ func (h *Handler) signUp(c *gin.Context) { // not task
 		return
 	}
 
+	// Validate password length (minimum 8 characters)
+	if len(input.PasswordHash) < 8 {
+		NewResponseError(c, http.StatusBadRequest, "password must be at least 8 characters long")
+		return
+	}
+
 	id, err := h.services.Authorization.CreateUser(input)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())

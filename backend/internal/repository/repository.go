@@ -16,6 +16,7 @@ type Authorization interface {
 
 type WebsocketDashBoard interface {
 	InventoryAlertScanned(*entities.InventoryAlert, time.Time, string) error
+	InventoryAlertPredict(*entities.InventoryAlert, entities.Predictions) error
 }
 
 type Inventory interface {

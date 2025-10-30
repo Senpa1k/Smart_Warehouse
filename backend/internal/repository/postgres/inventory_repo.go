@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
@@ -38,14 +39,38 @@ func (r *InventoryRepo) UpdateProduct(product *models.Products) error {
 	return r.db.Save(product).Error
 }
 
+func parseDateTime(dateStr string) (time.Time, error) {
+	dateStr = strings.TrimSpace(dateStr)
+	
+	// Try different date formats
+	formats := []string{
+		time.RFC3339,           // 2006-01-02T15:04:05Z07:00
+		time.RFC3339Nano,       // 2006-01-02T15:04:05.999999999Z07:00
+		"2006-01-02T15:04:05Z", // ISO 8601 with Z
+		"2006-01-02 15:04:05",  // Space separated
+		"2006-01-02",           // Date only
+	}
+	
+	var lastErr error
+	for _, format := range formats {
+		if t, err := time.Parse(format, dateStr); err == nil {
+			return t, nil
+		} else {
+			lastErr = err
+		}
+	}
+	
+	return time.Time{}, lastErr
+}
+
 func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset int) ([]models.InventoryHistory, int64, error) {
 	var histories []models.InventoryHistory
 	var total int64
 
-	query := r.db.Model(&models.InventoryHistory{}).Preload("Robot").Preload("Product")
+	query := r.db.Model(&models.InventoryHistory{})
 
 	if from != "" {
-		filterTime, err := time.Parse("2006-01-02 15:04:05", from)
+		filterTime, err := parseDateTime(from)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -53,9 +78,13 @@ func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset 
 	}
 
 	if to != "" {
-		filterTime, err := time.Parse("2006-01-02 15:04:05", to)
+		filterTime, err := parseDateTime(to)
 		if err != nil {
 			return nil, 0, err
+		}
+		// If time is exactly midnight (no time component), add full day
+		if filterTime.Hour() == 0 && filterTime.Minute() == 0 && filterTime.Second() == 0 {
+			filterTime = filterTime.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 		}
 		query = query.Where("scanned_at <= ?", filterTime)
 	}
@@ -68,6 +97,12 @@ func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset 
 		query = query.Where("status = ?", status)
 	}
 
-	err := query.Limit(limit).Offset(offset).Order("scanned_at DESC").Find(&histories).Error
+	// Count total before applying limit/offset
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply preload, limit, offset and order
+	err := query.Preload("Robot").Preload("Product").Limit(limit).Offset(offset).Order("scanned_at DESC").Find(&histories).Error
 	return histories, total, err
 }

@@ -2,10 +2,6 @@ FROM golang:latest AS builder
 
 WORKDIR /app
 
-# Configure Go proxy settings
-ENV GOPROXY=https://goproxy.io,direct
-ENV GOSUMDB=off
-
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -22,8 +18,15 @@ WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/migrator .
 COPY --from=builder /app/migrations ./migrations
-COPY entrypoint.sh .
 
-RUN chmod +x entrypoint.sh
+RUN echo '#!/bin/sh' > entrypoint.sh && \
+    echo '' >> entrypoint.sh && \
+    echo 'if [ ! -f /root/migrations_done ]; then' >> entrypoint.sh && \
+    echo '  ./migrator' >> entrypoint.sh && \
+    echo '  touch /root/migrations_done' >> entrypoint.sh && \
+    echo 'fi' >> entrypoint.sh && \
+    echo '' >> entrypoint.sh && \
+    echo 'exec ./main "$@"' >> entrypoint.sh && \
+    chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
