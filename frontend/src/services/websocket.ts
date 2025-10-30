@@ -1,53 +1,97 @@
-import { io, Socket } from 'socket.io-client';
 import type { WSMessage } from '../types';
 
 class WebSocketService {
-  private socket: Socket | null = null;
+  private socket: WebSocket | null = null;
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 1000;
+  private reconnectTimer: number | null = null;
+  private url: string = '';
 
   connect(url?: string): void {
-    const wsUrl = url || import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+    const baseUrl = url || import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
     const token = localStorage.getItem('token');
 
-    this.socket = io(wsUrl, {
-      auth: {
-        token
-      },
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5
-    });
+    // Construct WebSocket URL for dashboard endpoint
+    this.url = `${baseUrl}/api/ws/dashboard?token=${token}`;
 
-    this.socket.on('connect', () => {
-      console.log('WebSocket connected');
-    });
+    this.createConnection();
+  }
 
-    this.socket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
-    });
+  private createConnection(): void {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      return;
+    }
 
-    this.socket.on('message', (message: WSMessage) => {
-      this.notifyListeners(message.type, message.data);
-    });
+    try {
+      this.socket = new WebSocket(this.url);
 
-    // Specific event handlers
-    this.socket.on('robot_update', (data) => {
-      this.notifyListeners('robot_update', data);
-    });
+      this.socket.onopen = () => {
+        console.log('WebSocket connected');
+        this.reconnectAttempts = 0;
+        if (this.reconnectTimer) {
+          window.clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
+      };
 
-    this.socket.on('inventory_alert', (data) => {
-      this.notifyListeners('inventory_alert', data);
-    });
+      this.socket.onclose = () => {
+        console.log('WebSocket disconnected');
+        this.attemptReconnect();
+      };
 
-    this.socket.on('new_scan', (data) => {
-      this.notifyListeners('new_scan', data);
-    });
+      this.socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      this.socket.onmessage = (event) => {
+        try {
+          const message: WSMessage = JSON.parse(event.data);
+          this.notifyListeners(message.type, message.data);
+
+          // Also notify type-specific listeners
+          if (message.type === 'robot_update') {
+            this.notifyListeners('robot_update', message.data);
+          } else if (message.type === 'inventory_alert') {
+            this.notifyListeners('inventory_alert', message.data);
+          } else if (message.type === 'new_scan') {
+            this.notifyListeners('new_scan', message.data);
+          }
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      this.attemptReconnect();
+    }
+  }
+
+  private attemptReconnect(): void {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('Max reconnection attempts reached');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = this.reconnectDelay * this.reconnectAttempts;
+
+    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+    this.reconnectTimer = window.setTimeout(() => {
+      this.createConnection();
+    }, delay);
   }
 
   disconnect(): void {
+    if (this.reconnectTimer) {
+      window.clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     if (this.socket) {
-      this.socket.disconnect();
+      this.socket.close();
       this.socket = null;
     }
     this.listeners.clear();
@@ -76,12 +120,13 @@ class WebSocketService {
 
   getConnectionStatus(): 'connected' | 'disconnected' | 'reconnecting' {
     if (!this.socket) return 'disconnected';
-    if (this.socket.connected) return 'connected';
-    return 'reconnecting';
+    if (this.socket.readyState === WebSocket.OPEN) return 'connected';
+    if (this.socket.readyState === WebSocket.CONNECTING) return 'reconnecting';
+    return 'disconnected';
   }
 
   isConnected(): boolean {
-    return this.socket?.connected || false;
+    return this.socket?.readyState === WebSocket.OPEN;
   }
 }
 
