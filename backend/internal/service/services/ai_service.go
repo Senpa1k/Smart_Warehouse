@@ -10,6 +10,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/config"
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/sirupsen/logrus"
 )
 
 type AIService struct {
@@ -53,6 +54,8 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 	model.MaxTokens = 2000
 	model.RepetitionPenalty = 1.2
 
+	logrus.Print("send gigo request")
+
 	messages := []gigago.Message{
 		{Role: gigago.RoleUser, Content: `Проанализируй данные складских запасов указанные в этом json` + string(assistantRequest) + `и спрогнозируй остатки на количество дней равное ` + strconv.Itoa(rq.PeriodDays) +
 			` Проанализируй тенденции потребления для каждого товара и спрогнозируй:
@@ -78,6 +81,8 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 		},
 	}
 
+	logrus.Print("take gigo response")
+
 	resp, err := model.Generate(ctx, messages)
 	if err != nil {
 		return nil, err
@@ -91,6 +96,8 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 	if err := ai.repo.AIResponse(aiResponse); err != nil {
 		return nil, err
 	}
+
+	aiResponse.Confidence = aiResponse.Confidence * 100
 
 	ai.made <- aiResponse
 

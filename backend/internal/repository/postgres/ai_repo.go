@@ -28,10 +28,7 @@ func (ai *AIPostgres) AIRequest(rq entities.AIRequest) (*[]models.Products, erro
 
 func (ai *AIPostgres) AIResponse(rp entities.AIResponse) error {
 	for _, elem := range rp.Predictions {
-		predictionDate, err := time.Parse("02.01.2006", elem.PredictionDate)
-		if err != nil {
-			return err
-		}
+		predictionDate := time.Now()
 
 		var prediction models.AiPrediction = models.AiPrediction{
 			ProductID:         elem.ProductID,
