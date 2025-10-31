@@ -6,7 +6,6 @@ toolchain go1.24.9
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/gorilla/websocket v1.5.3

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -76,5 +78,36 @@ func (h *Handler) websocketIdentity(c *gin.Context) {
 
 	if c.Request.Header.Get("Sec-WebSocket-Key") == "" {
 		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header sec--key").Error())
+	}
+}
+
+// Защита от слишком частых запросов
+func (h *Handler) rateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Если Redis не доступен - пропускаем
+		if h.services.Redis == nil {
+			c.Next()
+			return
+		}
+
+		// Создаем ключ на основе IP и пути
+		clientIP := c.ClientIP()
+		key := fmt.Sprintf("rate:%s:%s", clientIP, c.Request.URL.Path)
+
+		// Проверяем лимит: 100 запросов в минуту
+		allowed, err := h.services.Redis.CheckRateLimit(key, 100, time.Minute)
+		if err != nil {
+			logrus.Errorf("Rate limit error: %v", err)
+			c.Next()
+			return
+		}
+
+		if !allowed {
+			NewResponseError(c, http.StatusTooManyRequests, "Слишком много запросов. Попробуйте позже.")
+			c.Abort()
+			return
+		}
+
+		c.Next()
 	}
 }

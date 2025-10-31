@@ -35,26 +35,41 @@ func (r *RobotService) AddData(data entities.RobotsData) error {
 		return err
 	}
 
-	// 2. Инвалидируем кеш dashboard
+	// 2. ✅ НОВОЕ: Сохраняем статус робота в Redis
 	if r.redis != nil {
-		r.redis.Delete("dashboard:current")
-		logrus.Info("Dashboard cache invalidated due to new robot data")
+		// Статус онлайн
+		r.redis.SetRobotOnline(data.RobotId)
+
+		// Уровень батареи
+		r.redis.SetRobotBattery(data.RobotId, data.BatteryLevel, 30*time.Second)
+
+		// Статус активности
+		r.redis.SetRobotStatus(data.RobotId, "active", 30*time.Second)
+
+		logrus.Infof("🤖 Robot %s status updated in Redis", data.RobotId)
 	}
 
-	// 3. ✅ НОВОЕ: Публикуем событие в Redis
+	// 3. Инвалидируем кеш dashboard
+	if r.redis != nil {
+		r.redis.Delete("dashboard:current")
+	}
+
+	// 4. Публикуем событие в Redis
 	if r.redis != nil {
 		event := map[string]interface{}{
 			"type":      "robot_data",
-			"data":      data,
+			"robot_id":  data.RobotId,
+			"battery":   data.BatteryLevel,
+			"status":    "active",
+			"online":    true,
 			"timestamp": time.Now().Format(time.RFC3339),
 		}
 
 		eventJSON, _ := json.Marshal(event)
 		r.redis.Publish("robot_updates", string(eventJSON))
-		logrus.Infof("📤 Published robot data to Redis channel: %s", data.RobotId)
 	}
 
-	// 4. Отправляем в канал для WebSocket (старая логика)
+	// 5. Отправляем в канал для WebSocket
 	r.made <- data
 
 	return nil

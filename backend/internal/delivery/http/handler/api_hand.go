@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/gin-gonic/gin"
@@ -211,4 +212,55 @@ func (h *Handler) exportInventoryHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, historyData)
+}
+
+// Получение статусов всех роботов
+func (h *Handler) getRobotsStatus(c *gin.Context) {
+	if h.services.Redis == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Redis не доступен, статусы в реальном времени недоступны",
+			"robots":  []string{},
+		})
+		return
+	}
+
+	// В реальном приложении здесь бы брали список роботов из БД
+	// Для демо используем тестовые ID
+	robotIDs := []string{"RB-001", "RB-002", "RB-003", "RB-004", "RB-005"}
+
+	statuses := make(map[string]interface{})
+	onlineCount := 0
+	totalBattery := 0
+
+	for _, robotID := range robotIDs {
+		online, _ := h.services.Redis.IsRobotOnline(robotID)
+		battery, _ := h.services.Redis.GetRobotBattery(robotID)
+		status, _ := h.services.Redis.GetRobotStatus(robotID)
+
+		if online {
+			onlineCount++
+			totalBattery += battery
+		}
+
+		statuses[robotID] = map[string]interface{}{
+			"online":        online,
+			"battery_level": battery,
+			"status":        status,
+			"last_update":   "в реальном времени", // В продакшене хранили бы время
+		}
+	}
+
+	// Вычисляем среднюю батарею
+	avgBattery := 0
+	if onlineCount > 0 {
+		avgBattery = totalBattery / onlineCount
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"online_robots": onlineCount,
+		"total_robots":  len(robotIDs),
+		"avg_battery":   avgBattery,
+		"robots":        statuses,
+		"last_updated":  time.Now().Format("15:04:05"),
+	})
 }

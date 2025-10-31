@@ -52,6 +52,15 @@ type Redis interface {
 	Exists(key string) (bool, error)
 	Publish(channel string, message interface{}) error
 	Subscribe(channel string) *redis.PubSub
+
+	SetRobotStatus(robotID, status string, expiration time.Duration) error
+	GetRobotStatus(robotID string) (string, error)
+	SetRobotBattery(robotID string, batteryLevel int, expiration time.Duration) error
+	GetRobotBattery(robotID string) (int, error)
+	SetRobotOnline(robotID string) error
+	IsRobotOnline(robotID string) (bool, error)
+
+	CheckRateLimit(key string, limit int, window time.Duration) (bool, error)
 }
 
 type Repository struct {
