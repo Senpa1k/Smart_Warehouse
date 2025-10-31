@@ -53,10 +53,10 @@ type Service struct {
 func NewService(repos *repository.Repository) *Service {
 	return &Service{
 		Authorization:      services.NewAuthService(repos.Authorization),
-		Robot:              services.NewRobotService(repos.Robot, made),
+		Robot:              services.NewRobotService(repos.Robot, made, repos.Redis),
 		WebsocketDashBoard: services.NewWebsocketDashBoard(repos.WebsocketDashBoard, made),
-		Inventory:          services.NewInventoryService(repos.Inventory),
-		DashBoard:          services.NewDashService(repos.DashBoard),
-		AI:                 services.NewAIService(repos.AI, made),
+		Inventory:          services.NewInventoryService(repos.Inventory, repos.Redis),
+		DashBoard:          services.NewDashService(repos.DashBoard, repos.Redis),
+		AI:                 services.NewAIService(repos.AI, made, repos.Redis),
 	}
 }
