@@ -63,6 +63,12 @@ func (r *RedisClient) HGet(key, field string) (string, error) {
 	return r.client.HGet(r.ctx, key, field).Result()
 }
 
+// Publish - отправка сообщения в Redis channel
 func (r *RedisClient) Publish(channel string, message interface{}) error {
 	return r.client.Publish(r.ctx, channel, message).Err()
+}
+
+// Subscribe - подписка на Redis channel
+func (r *RedisClient) Subscribe(channel string) *redis.PubSub {
+	return r.client.Subscribe(r.ctx, channel)
 }

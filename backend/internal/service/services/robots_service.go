@@ -1,7 +1,9 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
@@ -33,21 +35,26 @@ func (r *RobotService) AddData(data entities.RobotsData) error {
 		return err
 	}
 
-	// 2. Инвалидируем кеш dashboard при новых данных
+	// 2. Инвалидируем кеш dashboard
 	if r.redis != nil {
-		// Удаляем кеш dashboard
 		r.redis.Delete("dashboard:current")
-
-		// Также можно инвалидировать кеш по зоне
-		if data.Location.Zone != "" {
-			cacheKey := fmt.Sprintf("dashboard:zone:%s", data.Location.Zone)
-			r.redis.Delete(cacheKey)
-		}
-
 		logrus.Info("Dashboard cache invalidated due to new robot data")
 	}
 
-	// 3. Отправляем в канал для WebSocket
+	// 3. ✅ НОВОЕ: Публикуем событие в Redis
+	if r.redis != nil {
+		event := map[string]interface{}{
+			"type":      "robot_data",
+			"data":      data,
+			"timestamp": time.Now().Format(time.RFC3339),
+		}
+
+		eventJSON, _ := json.Marshal(event)
+		r.redis.Publish("robot_updates", string(eventJSON))
+		logrus.Infof("📤 Published robot data to Redis channel: %s", data.RobotId)
+	}
+
+	// 4. Отправляем в канал для WebSocket (старая логика)
 	r.made <- data
 
 	return nil

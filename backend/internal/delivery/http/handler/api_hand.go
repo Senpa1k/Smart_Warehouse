@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -52,8 +53,40 @@ func (h *Handler) websocketDashBoard(c *gin.Context) {
 	}
 	defer conn.Close()
 
+	// ✅ НОВОЕ: Подписываемся на Redis channel
+	if h.services.Redis != nil {
+		go h.handleRedisSubscriptions(conn)
+	}
+
+	// Старая логика
 	h.services.WebsocketDashBoard.RunStream(conn)
 	logrus.Print("вебсокет закрыт")
+}
+
+// ✅ НОВАЯ ФУНКЦИЯ: Обработка Redis подписок
+func (h *Handler) handleRedisSubscriptions(conn *websocket.Conn) {
+	ctx := context.Background()
+
+	// Подписываемся на канал robot_updates
+	pubsub := h.services.Redis.Subscribe("robot_updates")
+	defer pubsub.Close()
+
+	for {
+		msg, err := pubsub.ReceiveMessage(ctx)
+		if err != nil {
+			logrus.Errorf("Redis subscription error: %v", err)
+			return
+		}
+
+		// Отправляем сообщение через WebSocket
+		err = conn.WriteMessage(websocket.TextMessage, []byte(msg.Payload))
+		if err != nil {
+			logrus.Errorf("WebSocket send error: %v", err)
+			return
+		}
+
+		logrus.Info("📨 Sent Redis message to WebSocket client")
+	}
 }
 
 func (h *Handler) getDashInfo(c *gin.Context) {

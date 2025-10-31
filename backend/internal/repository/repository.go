@@ -6,6 +6,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository/postgres"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -49,6 +50,8 @@ type Redis interface {
 	Get(key string) (string, error)
 	Delete(key string) error
 	Exists(key string) (bool, error)
+	Publish(channel string, message interface{}) error
+	Subscribe(channel string) *redis.PubSub
 }
 
 type Repository struct {

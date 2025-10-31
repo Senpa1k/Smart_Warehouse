@@ -48,6 +48,7 @@ type Service struct {
 	WebsocketDashBoard
 	DashBoard
 	AI
+	Redis repository.Redis
 }
 
 func NewService(repos *repository.Repository) *Service {
@@ -58,5 +59,6 @@ func NewService(repos *repository.Repository) *Service {
 		Inventory:          services.NewInventoryService(repos.Inventory, repos.Redis),
 		DashBoard:          services.NewDashService(repos.DashBoard, repos.Redis),
 		AI:                 services.NewAIService(repos.AI, made, repos.Redis),
+		Redis:              repos.Redis,
 	}
 }
