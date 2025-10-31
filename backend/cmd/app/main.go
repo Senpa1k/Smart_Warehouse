@@ -18,7 +18,19 @@ func main() {
 		logrus.Fatalf("fatal initializetion db, %s", err.Error())
 	}
 
-	repos := repository.NewRepository(db)
+	// Инициализация Redis
+	redisClient, err := repository.NewRedisClient("redis://localhost:6379")
+	if err != nil {
+		logrus.Warnf("Redis connection failed: %v", err)
+		logrus.Info("Application will continue without Redis caching")
+		redisClient = nil
+	} else {
+		logrus.Info("Redis connected successfully")
+		defer redisClient.Close()
+	}
+
+	// Создаем репозитории с Redis
+	repos := repository.NewRepository(db, redisClient)
 	services := service.NewService(repos)
 	handler := handler.NewHandler(services)
 

@@ -43,6 +43,14 @@ type AI interface {
 	AIResponse(entities.AIResponse) error
 }
 
+// Redis интерфейс
+type Redis interface {
+	Set(key string, value interface{}, expiration time.Duration) error
+	Get(key string) (string, error)
+	Delete(key string) error
+	Exists(key string) (bool, error)
+}
+
 type Repository struct {
 	Robot
 	Inventory
@@ -50,9 +58,11 @@ type Repository struct {
 	WebsocketDashBoard
 	DashBoard
 	AI
+	Redis Redis // Добавляем Redis
 }
 
-func NewRepository(db *gorm.DB) *Repository {
+// Меняем конструктор чтобы принимать Redis клиент
+func NewRepository(db *gorm.DB, redisClient Redis) *Repository {
 	return &Repository{
 		Authorization:      postgres.NewAuthPostgres(db),
 		Robot:              postgres.NewRobotPostgres(db),
@@ -60,5 +70,15 @@ func NewRepository(db *gorm.DB) *Repository {
 		Inventory:          postgres.NewInventoryRepo(db),
 		DashBoard:          postgres.NewDashPostgres(db),
 		AI:                 postgres.NewAIPostgres(db),
+		Redis:              redisClient, // Передаем Redis клиент
 	}
+}
+
+// Helper метод для безопасной работы с Redis
+func (r *Repository) WithRedis(fn func(redis Redis) error) error {
+	if r.Redis == nil {
+		// Redis не доступен, пропускаем операцию
+		return nil
+	}
+	return fn(r.Redis)
 }
