@@ -31,7 +31,7 @@ func (s *AuthService) CreateUser(user models.Users) (uint, error) {
 }
 
 func (s *AuthService) GetUser(email string, password string) (string, *models.Users, error) {
-	// проверка налиия в бд
+	// checking the presence of the user in the database
 	in, err := s.repo.GetUser(email, generateHashPassword(password))
 
 	if err != nil {
@@ -60,7 +60,7 @@ func (s *AuthService) ParseToken(accessToken string) (uint, error) {
 	}
 	claims, ok := token.Claims.(*tokenClaims)
 	if !ok {
-		return 0, errors.New("tocen claims are not in tokenClaims")
+		return 0, errors.New("token claims are not in tokenClaims")
 	}
 
 	return claims.UserId, nil

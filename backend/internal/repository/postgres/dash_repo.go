@@ -17,13 +17,16 @@ func NewDashPostgres(db *gorm.DB) *DashPostgres {
 	return &DashPostgres{db: db}
 }
 
+// getting data about the current state of the entire field
 func (d *DashPostgres) GetDashInfo(dash *entities.DashInfo) error {
 	dash.ListRobots = make([]models.Robots, 0)
 
+	// getting robot data	
 	if err := d.db.Order("id").Find(&dash.ListRobots).Error; err != nil {
 		return fmt.Errorf("failed to get robots: %w", err)
 	}
 
+	// getting data about recent scans
 	var scans []models.InventoryHistory
 	if err := d.db.Preload("Robot").Preload("Product").
 		Order("scanned_at DESC").
@@ -34,6 +37,7 @@ func (d *DashPostgres) GetDashInfo(dash *entities.DashInfo) error {
 
 	dash.ListScans = [100]models.InventoryHistory{}
 
+	// The limit is 100 entries
 	for i, scan := range scans {
 		if i >= 100 {
 			break

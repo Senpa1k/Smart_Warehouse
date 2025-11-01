@@ -16,35 +16,42 @@ func NewInventoryRepo(db *gorm.DB) *InventoryRepo {
 	return &InventoryRepo{db: db}
 }
 
+// вставка данных в бд по 100 записей
 func (r *InventoryRepo) ImportInventoryHistories(histories []models.InventoryHistory) error {
 	return r.db.CreateInBatches(histories, 100).Error
 }
 
+// получение данных инвентаризации по id продуктов
 func (r *InventoryRepo) GetInventoryHistoryByProductIDs(productIDs []string) ([]models.InventoryHistory, error) {
 	var histories []models.InventoryHistory
 	err := r.db.Preload("Robot").Preload("Product").Where("product_id IN ?", productIDs).Find(&histories).Error
 	return histories, err
 }
 
+// получение данных инвентаризации по id сканирований роботами
 func (r *InventoryRepo) GetInventoryHistoryByScanIDs(scanIDs []string) ([]models.InventoryHistory, error) {
 	var histories []models.InventoryHistory
 	err := r.db.Preload("Robot").Preload("Product").Where("id IN ?", scanIDs).Find(&histories).Error
 	return histories, err
 }
 
+// получение продукта по id
 func (r *InventoryRepo) GetProductByID(productID string) error {
 	var product models.Products
 	return r.db.First(&product, "id = ?", productID).Error
 }
 
+// добавление продукта в бд
 func (r *InventoryRepo) CreateProduct(product *models.Products) error {
 	return r.db.Create(product).Error
 }
 
+// обновление данных о продукте
 func (r *InventoryRepo) UpdateProduct(product *models.Products) error {
 	return r.db.Save(product).Error
 }
 
+// функция для корректного парсинга дат
 func parseDateTime(dateStr string) (time.Time, error) {
 	dateStr = strings.TrimSpace(dateStr)
 
@@ -69,12 +76,15 @@ func parseDateTime(dateStr string) (time.Time, error) {
 	return time.Time{}, lastErr
 }
 
+// фильтрация данных инвентаризации с пагинацией
 func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset int) ([]models.InventoryHistory, int64, error) {
 	var histories []models.InventoryHistory
 	var total int64
 
+	// создание запроса к бд
 	query := r.db.Model(&models.InventoryHistory{})
 
+	// создание фильтра по дате "от"
 	if from != "" {
 		filterTime, err := parseDateTime(from)
 		if err != nil {
@@ -83,6 +93,7 @@ func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset 
 		query = query.Where("scanned_at >= ?", filterTime)
 	}
 
+	// создание фильтра по дате "до"
 	if to != "" {
 		filterTime, err := parseDateTime(to)
 		if err != nil {
@@ -95,10 +106,12 @@ func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset 
 		query = query.Where("scanned_at <= ?", filterTime)
 	}
 
+	// создание фильтра по зоне работы робота
 	if zone != "" {
 		query = query.Where("zone = ?", zone)
 	}
 
+	// создание фильтра по статусу товара
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}

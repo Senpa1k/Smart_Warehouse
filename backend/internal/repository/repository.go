@@ -40,7 +40,7 @@ type Robot interface {
 }
 
 type AI interface {
-	AIRequest(entities.AIRequest) (*[]models.Products, error)
+	AIRequest(entities.AIRequest) ([]models.InventoryHistory, error)
 	AIResponse(entities.AIResponse) error
 }
 

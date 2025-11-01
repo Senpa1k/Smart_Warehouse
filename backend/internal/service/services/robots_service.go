@@ -24,6 +24,7 @@ func NewRobotService(repo repository.Robot, made chan<- interface{}, redis repos
 	}
 }
 
+// добавление данных о сканировании
 func (r *RobotService) AddData(data entities.RobotsData) error {
 	// Проверка валидности данных
 	if !r.repo.CheckId(data.RobotId) {

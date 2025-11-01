@@ -78,6 +78,7 @@ type AIResponse struct {
 
 type Predictions struct {
 	ProductID         string  `json:"product_id"`
+	ProductName		  string  `json:"product_name"`
 	PredictionDate    string  `json:"prediction_date"`
 	DaysUntilStockout int     `json:"days_until_stockout"`
 	RecommendedOrder  int     `json:"recommended_order"`

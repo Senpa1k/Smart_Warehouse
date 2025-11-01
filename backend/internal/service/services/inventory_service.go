@@ -32,7 +32,9 @@ func NewInventoryService(repo repository.Inventory, redis repository.Redis) *Inv
 	}
 }
 
+// импорт csv файла в приложение
 func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult, error) {
+	// настройка конфигурации CSV ридера
 	reader := csv.NewReader(csvData)
 	reader.Comma = ';'
 	reader.FieldsPerRecord = -1
@@ -47,6 +49,7 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 		return nil, fmt.Errorf("failed to read header: %w", err)
 	}
 
+	// обработка записей из файла
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -58,12 +61,14 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 			continue
 		}
 
+		// проверка количества полей
 		if len(record) < 7 {
 			failedCount++
 			errors = append(errors, "Insufficient fields in record")
 			continue
 		}
 
+		// парсинг значений
 		quantity, err1 := strconv.Atoi(strings.TrimSpace(record[2]))
 		row, err2 := strconv.Atoi(strings.TrimSpace(record[5]))
 		shelf, err3 := strconv.Atoi(strings.TrimSpace(record[6]))
@@ -83,6 +88,7 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 
 		productID := strings.TrimSpace(record[0])
 
+		// формирование модели для бд
 		history := models.InventoryHistory{
 			RobotID:     robotIdForImport,
 			ProductID:   productID,
@@ -98,6 +104,7 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 		successCount++
 	}
 
+	// вставка данных в бд
 	if len(histories) > 0 {
 		if err := s.repo.ImportInventoryHistories(histories); err != nil {
 			return nil, fmt.Errorf("failed to import inventory histories: %w", err)
@@ -111,12 +118,15 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 	}, nil
 }
 
+// экспорт данных их приложения в формате Excel таблицы
 func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
+	// получение данных для экспорта
 	histories, err := s.repo.GetInventoryHistoryByScanIDs(scanIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get inventory history: %w", err)
 	}
 
+	// создание excel файла и настройка его столбцов
 	f := excelize.NewFile()
 	sheetName := "InventoryHistory"
 	f.SetSheetName("Sheet1", sheetName)
@@ -127,6 +137,7 @@ func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
 		f.SetCellValue(sheetName, cell, header)
 	}
 
+	// заполнение таблицы данными
 	for i, history := range histories {
 		row := i + 2
 		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), history.ID)
@@ -149,27 +160,15 @@ func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
+// получение истории инвентаризации
 func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offset int) (*entities.HistoryResponse, error) {
-	// 1. Создаем ключ кеша
-	cacheKey := fmt.Sprintf("history:%s:%s:%s:%s:%d:%d", from, to, zone, status, limit, offset)
-
-	// 2. Пробуем получить из кеша
-	if s.redis != nil {
-		if cached, err := s.redis.Get(cacheKey); err == nil {
-			var response entities.HistoryResponse
-			if err := json.Unmarshal([]byte(cached), &response); err == nil {
-				logrus.Infof("History data served from cache for key: %s", cacheKey)
-				return &response, nil
-			}
-		}
-	}
-
-	// 3. Если нет в кеше - получаем из БД
+	// получение данных из бд
 	histories, total, err := s.repo.GetHistory(from, to, zone, status, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
 
+	// формирование ответа
 	response := &entities.HistoryResponse{
 		Total: total,
 		Items: histories,

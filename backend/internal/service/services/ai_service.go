@@ -79,110 +79,89 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 		}
 	}
 
-	// 3. Если нет в кеше - выполняем AI запрос через HTTP API
+	// getting the key to access the AI
 	apikey, err := config.Get("API_KEY")
 	if err != nil {
 		log.Printf("Failed to get Giga Api key: %v", err)
 		return nil, err
 	}
 
+	// creating a client for communication with AI
+	client, err := gigago.NewClient(ctx, apikey, gigago.WithCustomInsecureSkipVerify(true))
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	// getting data for analysis
 	products, err := ai.repo.AIRequest(rq)
 	if err != nil {
 		return nil, err
 	}
 
+	// converting data to json format for further analysis
 	assistantRequest, err := json.Marshal(products)
 	if err != nil {
 		return nil, err
 	}
 
-	// Подготовка запроса к GigaChat API
-	messages := []GigaChatMessage{
-		{
-			Role:    "system",
-			Content: "Ты - AI ассистент для анализа складских запасов. Анализируй данные инвентаризации и прогнозируй остатки товаров. Отвечай ТОЛЬКО в формате JSON.",
-		},
-		{
-			Role: "user",
-			Content: `Проанализируй данные складских запасов указанные в этом json` + string(assistantRequest) + `и спрогнозируй остатки на количество дней равное ` + strconv.Itoa(rq.PeriodDays) +
-				` Проанализируй тенденции потребления для каждого товара и спрогнозируй:
+	// configuring the AI model
+	model := client.GenerativeModel("GigaChat")
+	model.SystemInstruction = "Ты - AI ассистент для анализа складских запасов. Анализируй данные инвентаризации и прогнозируй остатки товаров. Отвечай ТОЛЬКО в формате JSON."
+	model.Temperature = 0.2
+	model.TopP = 0.2
+	model.MaxTokens = 3500
+	model.RepetitionPenalty = 1.2
+
+	// prompt for getting a forecast
+	messages := []gigago.Message{
+		{Role: gigago.RoleUser, Content: `Анализ складских запасов - прогноз на ` + strconv.Itoa(rq.PeriodDays) + ` дней. ДАННЫЕ ДЛЯ АНАЛИЗА:` + string(assistantRequest) +
+			`
+
+			ЗАДАЧА:
+			Проанализируй тенденции потребления для каждого товара и спрогнозируй:
 				1. Через сколько дней закончатся запасы (days_until_stockout)
 				2. Рекомендуемое количество для заказа (recommended_order_quantity)
 				3. Достоверность прогноза (confidence) от 0.0 до 1.0
 
-				Верни ответ в формате JSON, напиши prediction_date в формате dd.mm.yyyy:
-				{
-					"predictions": [
-						{
-							"product_id": string,
-							"prediction_date": string
-							"days_until_stockout": int,
-							"recommended_order": int,
-							"confidence_score": float,
-						}
-					]
-					"confidence": float,
-				}
+
+			ТРЕБОВАНИЯ К ОТВЕТУ:
+			- prediction_date должен быть: сегодняшней датой
+			- Используй product_id и product_name из предоставленных данных
+			- Ответ должен быть в точном JSON формате
+
+			ФОРМАТ ОТВЕТА:
+			{
+				"predictions": [
+					{
+						"product_id": "string",
+						"product_name: "string",
+						"prediction_date": "dd.mm.yyyy",
+						"days_until_stockout": "int",
+						"recommended_order": "int",
+						"confidence_score": "float",
+					}
+				],
+				"confidence": "float",
+			}
 
 				Только JSON, без дополнительного текста.`,
 		},
 	}
 
-	gigaRequest := GigaChatRequest{
-		Model:       "GigaChat",
-		Messages:    messages,
-		Temperature: 0.2,
-		TopP:        0.2,
-		MaxTokens:   2000,
-	}
-
-	requestBody, err := json.Marshal(gigaRequest)
+	// request to the AI
+	resp, err := model.Generate(ctx, messages)
 	if err != nil {
 		return nil, err
 	}
 
-	// Создаем HTTP запрос
-	req, err := http.NewRequest("POST", "https://gigachat.devices.sberbank.ru/api/v1/chat/completions", bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apikey)
-	req.Header.Set("Accept", "application/json")
-
-	// Выполняем запрос
-	resp, err := ai.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Читаем ответ
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GigaChat API error: %s, body: %s", resp.Status, string(body))
-	}
-
-	var gigaResponse GigaChatResponse
-	if err := json.Unmarshal(body, &gigaResponse); err != nil {
-		return nil, err
-	}
-
-	if len(gigaResponse.Choices) == 0 {
-		return nil, fmt.Errorf("empty response from GigaChat API")
-	}
-
-	// Парсим AI ответ
+	// bringing the data received from AI to a format convenient for further processing
 	var aiResponse entities.AIResponse
 	if err := json.Unmarshal([]byte(gigaResponse.Choices[0].Message.Content), &aiResponse); err != nil {
 		return nil, err
 	}
 
+	// writing the result to the database
 	if err := ai.repo.AIResponse(aiResponse); err != nil {
 		return nil, err
 	}
