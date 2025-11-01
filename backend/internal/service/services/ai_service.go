@@ -1,17 +1,17 @@
 package services
 
 import (
-	"bytes"
+	"context"
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/Role1776/gigago"
 	"github.com/Senpa1k/Smart_Warehouse/internal/config"
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
@@ -87,6 +87,7 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 	}
 
 	// creating a client for communication with AI
+	ctx := context.Background()
 	client, err := gigago.NewClient(ctx, apikey, gigago.WithCustomInsecureSkipVerify(true))
 	if err != nil {
 		return nil, err
@@ -157,7 +158,7 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 
 	// bringing the data received from AI to a format convenient for further processing
 	var aiResponse entities.AIResponse
-	if err := json.Unmarshal([]byte(gigaResponse.Choices[0].Message.Content), &aiResponse); err != nil {
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &aiResponse); err != nil {
 		return nil, err
 	}
 
