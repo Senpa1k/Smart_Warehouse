@@ -16,7 +16,7 @@ const (
 	robotCtx            = "robotId"
 )
 
-func (h *Handler) userIdentity(c *gin.Context) {
+func (h *Handler) UserIdentity(c *gin.Context) {
 
 	header := c.GetHeader(authorizationHeader)
 	token := ""
@@ -44,7 +44,7 @@ func (h *Handler) userIdentity(c *gin.Context) {
 	c.Set(userCtx, userID)
 }
 
-func (h *Handler) robotIdentity(c *gin.Context) {
+func (h *Handler) RobotIdentity(c *gin.Context) {
 	header := c.GetHeader("Authorization")
 	if header == "" {
 		NewResponseError(c, http.StatusUnauthorized, "empty auth header")
@@ -65,7 +65,7 @@ func (h *Handler) robotIdentity(c *gin.Context) {
 	c.Set(robotCtx, robotID)
 }
 
-func (h *Handler) websocketIdentity(c *gin.Context) {
+func (h *Handler) WebsocketIdentity(c *gin.Context) {
 	if c.GetHeader("Connection") != "Upgrade" {
 		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header Connections").Error())
 	}
@@ -82,7 +82,7 @@ func (h *Handler) websocketIdentity(c *gin.Context) {
 }
 
 // Защита от слишком частых запросов
-func (h *Handler) rateLimitMiddleware() gin.HandlerFunc {
+func (h *Handler) RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Если Redis не доступен - пропускаем
 		if h.services.Redis == nil {

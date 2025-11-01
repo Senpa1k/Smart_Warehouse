@@ -20,7 +20,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  10,
 }
 
-func (h *Handler) robots(c *gin.Context) {
+func (h *Handler) Robots(c *gin.Context) {
 	_, ok := c.Get(robotCtx)
 	if !ok {
 		NewResponseError(c, http.StatusInternalServerError, "robot id not found")
@@ -46,7 +46,7 @@ func (h *Handler) robots(c *gin.Context) {
 	})
 }
 
-func (h *Handler) websocketDashBoard(c *gin.Context) {
+func (h *Handler) WebsocketDashBoard(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logrus.Error("upgrade error with socket")
@@ -56,7 +56,7 @@ func (h *Handler) websocketDashBoard(c *gin.Context) {
 
 	// ✅ НОВОЕ: Подписываемся на Redis channel
 	if h.services.Redis != nil {
-		go h.handleRedisSubscriptions(conn)
+		go h.HandleRedisSubscriptions(conn)
 	}
 
 	// Старая логика
@@ -65,7 +65,7 @@ func (h *Handler) websocketDashBoard(c *gin.Context) {
 }
 
 // ✅ НОВАЯ ФУНКЦИЯ: Обработка Redis подписок
-func (h *Handler) handleRedisSubscriptions(conn *websocket.Conn) {
+func (h *Handler) HandleRedisSubscriptions(conn *websocket.Conn) {
 	ctx := context.Background()
 
 	// Подписываемся на канал robot_updates
@@ -90,7 +90,7 @@ func (h *Handler) handleRedisSubscriptions(conn *websocket.Conn) {
 	}
 }
 
-func (h *Handler) getDashInfo(c *gin.Context) {
+func (h *Handler) GetDashInfo(c *gin.Context) {
 	_, ok := c.Get(userCtx)
 	if !ok {
 		NewResponseError(c, http.StatusInternalServerError, "robot id not found")
@@ -133,7 +133,7 @@ func (h *Handler) AIRequest(c *gin.Context) {
 	})
 }
 
-func (h *Handler) exportExcel(c *gin.Context) {
+func (h *Handler) ExportExcel(c *gin.Context) {
 	userID, ok := c.Get(userCtx)
 	if !ok {
 		NewResponseError(c, http.StatusUnauthorized, "user not authenticated")
@@ -161,7 +161,7 @@ func (h *Handler) exportExcel(c *gin.Context) {
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", exelFile)
 }
 
-func (h *Handler) importInventory(c *gin.Context) {
+func (h *Handler) ImportInventory(c *gin.Context) {
 	userID, ok := c.Get(userCtx)
 	if !ok {
 		NewResponseError(c, http.StatusUnauthorized, "user not authenticated")
@@ -215,7 +215,7 @@ func (h *Handler) exportInventoryHistory(c *gin.Context) {
 }
 
 // Получение статусов всех роботов
-func (h *Handler) getRobotsStatus(c *gin.Context) {
+func (h *Handler) GetRobotsStatus(c *gin.Context) {
 	if h.services.Redis == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Redis не доступен, статусы в реальном времени недоступны",

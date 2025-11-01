@@ -18,7 +18,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.New()
 
 	// ✅ ДОБАВЛЯЕМ Rate Limiting на все API
-	router.Use(h.rateLimitMiddleware())
+	router.Use(h.RateLimitMiddleware())
 
 	// router.Use(cors.New(cors.Config{
 	// 	AllowOrigins:     []string{"http://localhost", "http://localhost:5173"},
@@ -33,41 +33,41 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	{
 		auth := api.Group("/auth")
 		{
-			auth.POST("/sign-up", h.signUp)
-			auth.POST("/login", h.login)
+			auth.POST("/sign-up", h.SignUp)
+			auth.POST("/login", h.Login)
 		}
 
-		robots := api.Group("/robots", h.robotIdentity)
+		robots := api.Group("/robots", h.RobotIdentity)
 		{
-			robots.POST("/data", h.robots)
+			robots.POST("/data", h.Robots)
 		}
-		ws := api.Group("/ws", h.userIdentity, h.websocketIdentity)
+		ws := api.Group("/ws", h.UserIdentity, h.WebsocketIdentity)
 		{
-			ws.GET("/dashboard", h.websocketDashBoard)
+			ws.GET("/dashboard", h.WebsocketDashBoard)
 		}
-		inventory := api.Group("/inventory", h.userIdentity)
+		inventory := api.Group("/inventory", h.UserIdentity)
 		{
-			inventory.POST("/import", h.importInventory)
+			inventory.POST("/import", h.ImportInventory)
 			inventory.GET("/history", h.exportInventoryHistory)
 		}
 
-		export := api.Group("/export", h.userIdentity)
+		export := api.Group("/export", h.UserIdentity)
 		{
-			export.GET("/excel", h.exportExcel)
+			export.GET("/excel", h.ExportExcel)
 		}
-		dashboard := api.Group("/dashboard", h.userIdentity)
+		dashboard := api.Group("/dashboard", h.UserIdentity)
 		{
-			dashboard.GET("/current", h.getDashInfo)
+			dashboard.GET("/current", h.GetDashInfo)
 		}
-		ai := api.Group("/ai", h.userIdentity)
+		ai := api.Group("/ai", h.UserIdentity)
 		{
 			ai.POST("/predict", h.AIRequest)
 		}
 
 		// ✅ НОВАЯ ГРУППА: Мониторинг роботов
-		monitoring := api.Group("/monitoring", h.userIdentity)
+		monitoring := api.Group("/monitoring", h.UserIdentity)
 		{
-			monitoring.GET("/robots/status", h.getRobotsStatus)
+			monitoring.GET("/robots/status", h.GetRobotsStatus)
 		}
 	}
 
