@@ -1,10 +1,8 @@
 package handler
 
 import (
-	"time"
-
 	"github.com/Senpa1k/Smart_Warehouse/internal/service"
-	"github.com/gin-contrib/cors"
+	//"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,48 +17,57 @@ func NewHandler(services *service.Service) *Handler {
 func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.New()
 
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost", "http://localhost:5173"}, // твой фронтенд (Vite, React и т.д.)
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	// ✅ ДОБАВЛЯЕМ Rate Limiting на все API
+	router.Use(h.RateLimitMiddleware())
+
+	// router.Use(cors.New(cors.Config{
+	// 	AllowOrigins:     []string{"http://localhost", "http://localhost:5173"},
+	// 	AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+	// 	ExposeHeaders:    []string{"Content-Length"},
+	// 	AllowCredentials: true,
+	// 	MaxAge:           12 * time.Hour,
+	// }))
 
 	api := router.Group("/api")
 	{
 		auth := api.Group("/auth")
 		{
-			auth.POST("/sign-up", h.signUp)
-			auth.POST("/login", h.login)
+			auth.POST("/sign-up", h.SignUp)
+			auth.POST("/login", h.Login)
 		}
 
-		robots := api.Group("/robots", h.robotIdentity)
+		robots := api.Group("/robots", h.RobotIdentity)
 		{
-			robots.POST("/data", h.robots)
+			robots.POST("/data", h.Robots)
 		}
-		ws := api.Group("/ws", h.userIdentity, h.websocketIdentity)
+		ws := api.Group("/ws", h.UserIdentity, h.WebsocketIdentity)
 		{
-			ws.GET("/dashboard", h.websocketDashBoard)
+			ws.GET("/dashboard", h.WebsocketDashBoard)
 		}
-		inventory := api.Group("/inventory", h.userIdentity)
+		inventory := api.Group("/inventory", h.UserIdentity)
 		{
-			inventory.POST("/import", h.importInventory)
+			inventory.POST("/import", h.ImportInventory)
 			inventory.GET("/history", h.exportInventoryHistory)
 		}
 
-		export := api.Group("/export", h.userIdentity)
+		export := api.Group("/export", h.UserIdentity)
 		{
-			export.GET("/excel", h.exportExcel)
+			export.GET("/excel", h.ExportExcel)
 		}
-		dashboard := api.Group("/dashboard", h.userIdentity)
+		dashboard := api.Group("/dashboard", h.UserIdentity)
 		{
-			dashboard.GET("/current", h.getDashInfo)
+			dashboard.GET("/current", h.GetDashInfo)
 		}
-		ai := api.Group("/ai", h.userIdentity)
+		ai := api.Group("/ai", h.UserIdentity)
 		{
 			ai.POST("/predict", h.AIRequest)
+		}
+
+		// ✅ НОВАЯ ГРУППА: Мониторинг роботов
+		monitoring := api.Group("/monitoring", h.UserIdentity)
+		{
+			monitoring.GET("/robots/status", h.GetRobotsStatus)
 		}
 	}
 

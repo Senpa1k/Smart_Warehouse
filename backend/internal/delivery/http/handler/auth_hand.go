@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (h *Handler) signUp(c *gin.Context) { // not task
+func (h *Handler) SignUp(c *gin.Context) { // not task
 	var input models.Users
 
 	if err := c.BindJSON(&input); err != nil {
@@ -34,7 +34,7 @@ func (h *Handler) signUp(c *gin.Context) { // not task
 	})
 }
 
-func (h *Handler) login(c *gin.Context) {
+func (h *Handler) Login(c *gin.Context) {
 	var input models.Users
 
 	if err := c.Bind(&input); err != nil {

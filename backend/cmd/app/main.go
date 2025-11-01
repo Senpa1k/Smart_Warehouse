@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/Senpa1k/Smart_Warehouse/internal/config"
 	"github.com/Senpa1k/Smart_Warehouse/internal/delivery/http/handler"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
 	"github.com/Senpa1k/Smart_Warehouse/internal/server"
@@ -18,7 +19,22 @@ func main() {
 		logrus.Fatalf("fatal initializetion db, %s", err.Error())
 	}
 
-	repos := repository.NewRepository(db)
+	redisURL, err := config.Get("REDIS_URL")
+	if err != nil {
+		logrus.Warnf("Could not get REDIS_URL from environment: %v", err)
+		redisURL = ""
+	}
+	redisClient, err := repository.NewRedisClient(redisURL)
+	if err != nil {
+		logrus.Warnf("Redis connection failed: %v", err)
+		logrus.Info("Application will continue without Redis caching")
+		redisClient = nil
+	} else {
+		logrus.Info("Redis connected successfully")
+		defer redisClient.Close()
+	}
+
+	repos := repository.NewRepository(db, redisClient)
 	services := service.NewService(repos)
 	handler := handler.NewHandler(services)
 
