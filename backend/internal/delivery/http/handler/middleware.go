@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -14,7 +16,7 @@ const (
 	robotCtx            = "robotId"
 )
 
-func (h *Handler) userIdentity(c *gin.Context) {
+func (h *Handler) UserIdentity(c *gin.Context) {
 
 	header := c.GetHeader(authorizationHeader)
 	token := ""
@@ -42,7 +44,7 @@ func (h *Handler) userIdentity(c *gin.Context) {
 	c.Set(userCtx, userID)
 }
 
-func (h *Handler) robotIdentity(c *gin.Context) {
+func (h *Handler) RobotIdentity(c *gin.Context) {
 	header := c.GetHeader("Authorization")
 	if header == "" {
 		NewResponseError(c, http.StatusUnauthorized, "empty auth header")
@@ -63,7 +65,7 @@ func (h *Handler) robotIdentity(c *gin.Context) {
 	c.Set(robotCtx, robotID)
 }
 
-func (h *Handler) websocketIdentity(c *gin.Context) {
+func (h *Handler) WebsocketIdentity(c *gin.Context) {
 	if c.GetHeader("Connection") != "Upgrade" {
 		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header Connections").Error())
 	}
@@ -76,5 +78,36 @@ func (h *Handler) websocketIdentity(c *gin.Context) {
 
 	if c.Request.Header.Get("Sec-WebSocket-Key") == "" {
 		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header sec--key").Error())
+	}
+}
+
+// Защита от слишком частых запросов
+func (h *Handler) RateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Если Redis не доступен - пропускаем
+		if h.services.Redis == nil {
+			c.Next()
+			return
+		}
+
+		// Создаем ключ на основе IP и пути
+		clientIP := c.ClientIP()
+		key := fmt.Sprintf("rate:%s:%s", clientIP, c.Request.URL.Path)
+
+		// Проверяем лимит: 100 запросов в минуту
+		allowed, err := h.services.Redis.CheckRateLimit(key, 100, time.Minute)
+		if err != nil {
+			logrus.Errorf("Rate limit error: %v", err)
+			c.Next()
+			return
+		}
+
+		if !allowed {
+			NewResponseError(c, http.StatusTooManyRequests, "Слишком много запросов. Попробуйте позже.")
+			c.Abort()
+			return
+		}
+
+		c.Next()
 	}
 }

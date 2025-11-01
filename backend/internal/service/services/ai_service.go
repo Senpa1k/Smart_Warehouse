@@ -1,28 +1,83 @@
 package services
 
 import (
-	"context"
+	"bytes"
+	"crypto/md5"
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/Role1776/gigago"
 	"github.com/Senpa1k/Smart_Warehouse/internal/config"
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/sirupsen/logrus"
 )
 
 type AIService struct {
-	repo repository.AI
-	made chan<- interface{}
+	repo       repository.AI
+	redis      repository.Redis
+	made       chan<- interface{}
+	httpClient *http.Client
 }
 
-func NewAIService(repo repository.AI, made chan<- interface{}) *AIService {
-	return &AIService{repo: repo, made: made}
+func NewAIService(repo repository.AI, made chan<- interface{}, redis repository.Redis) *AIService {
+	// Создаем HTTP клиент с таймаутами и пропуском проверки SSL (аналогично WithCustomInsecureSkipVerify)
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	return &AIService{
+		repo:       repo,
+		redis:      redis,
+		made:       made,
+		httpClient: httpClient,
+	}
+}
+
+// Структуры для GigaChat API
+type GigaChatRequest struct {
+	Model       string            `json:"model"`
+	Messages    []GigaChatMessage `json:"messages"`
+	Temperature float64           `json:"temperature,omitempty"`
+	TopP        float64           `json:"top_p,omitempty"`
+	MaxTokens   int               `json:"max_tokens,omitempty"`
+}
+
+type GigaChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type GigaChatResponse struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
 }
 
 func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error) {
-	ctx := context.Background()
+	// 1. Создаем ключ кеша на основе входных параметров
+	cacheKey := fmt.Sprintf("ai:predict:%s:%d", generateRequestHash(rq), rq.PeriodDays)
+
+	// 2. Пробуем получить из кеша
+	if ai.redis != nil {
+		if cached, err := ai.redis.Get(cacheKey); err == nil {
+			var response entities.AIResponse
+			if err := json.Unmarshal([]byte(cached), &response); err == nil {
+				logrus.Infof("AI prediction served from cache for key: %s", cacheKey)
+				return &response, nil
+			}
+		}
+	}
 
 	// getting the key to access the AI
 	apikey, err := config.Get("API_KEY")
@@ -102,7 +157,7 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 
 	// bringing the data received from AI to a format convenient for further processing
 	var aiResponse entities.AIResponse
-	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &aiResponse); err != nil {
+	if err := json.Unmarshal([]byte(gigaResponse.Choices[0].Message.Content), &aiResponse); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +166,20 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 		return nil, err
 	}
 
+	// 4. Сохраняем результат в кеш на 1 час
+	if ai.redis != nil {
+		data, _ := json.Marshal(aiResponse)
+		ai.redis.Set(cacheKey, data, time.Hour)
+		logrus.Infof("AI prediction cached for key: %s", cacheKey)
+	}
+
 	ai.made <- aiResponse
 
 	return &aiResponse, nil
+}
+
+// Вспомогательная функция для создания хеша запроса
+func generateRequestHash(rq entities.AIRequest) string {
+	data := fmt.Sprintf("%v", rq)
+	return fmt.Sprintf("%x", md5.Sum([]byte(data)))
 }

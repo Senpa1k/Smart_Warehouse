@@ -35,13 +35,12 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 		for {
 			select {
 			case who := <-r.made: // либо робот либо аи преддикты
-
 				if scan, ok := who.(entities.RobotsData); ok { // robot
 					if err := r.ScannedRobotSend(conn, scan); err != nil {
 						logrus.Print("Websocket was closed")
 						break
 					}
-				} else if scan, ok := who.(entities.AIResponse); !ok { // аи предикт AIResponse
+				} else if scan, ok := who.(entities.AIResponse); ok { // аи предикт AIResponse
 					if err := r.ScannedAiSend(conn, scan); err != nil {
 						logrus.Print("Websocket was closed")
 						break
@@ -113,12 +112,12 @@ func (r *WebsocketDashBoardService) ScannedAiSend(conn *websocket.Conn, scan ent
 	// обработка прогноза
 	for _, predict := range scan.Predictions {
 		if err := r.repo.InventoryAlertPredict(&result, predict); err == nil {
-			err := conn.WriteJSON(map[string]interface{}{
+			err_req := conn.WriteJSON(map[string]interface{}{
 				"type": "inventory_alert",
 				"data": result,
 			})
-			if err != nil {
-				return err
+			if err_req != nil {
+				return err_req
 			}
 		} else {
 			logrus.Print(err)

@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -19,11 +21,15 @@ const (
 )
 
 type InventoryService struct {
-	repo repository.Inventory
+	repo  repository.Inventory
+	redis repository.Redis
 }
 
-func NewInventoryService(repo repository.Inventory) *InventoryService {
-	return &InventoryService{repo: repo}
+func NewInventoryService(repo repository.Inventory, redis repository.Redis) *InventoryService {
+	return &InventoryService{
+		repo:  repo,
+		redis: redis,
+	}
 }
 
 // импорт csv файла в приложение
@@ -169,6 +175,14 @@ func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offs
 	}
 	response.Pagination.Limit = limit
 	response.Pagination.Offset = offset
+
+	// 4. Сохраняем в кеш на 30 секунд
+	histories, total, err = s.repo.GetHistory(from, to, zone, status, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get history: %w", err)
+	}
+
+	logrus.Infof("History data cached for key: %s", cacheKey)
 
 	return response, nil
 }

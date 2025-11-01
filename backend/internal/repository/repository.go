@@ -6,6 +6,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository/postgres"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -43,6 +44,25 @@ type AI interface {
 	AIResponse(entities.AIResponse) error
 }
 
+// Redis интерфейс
+type Redis interface {
+	Set(key string, value interface{}, expiration time.Duration) error
+	Get(key string) (string, error)
+	Delete(key string) error
+	Exists(key string) (bool, error)
+	Publish(channel string, message interface{}) error
+	Subscribe(channel string) *redis.PubSub
+
+	SetRobotStatus(robotID, status string, expiration time.Duration) error
+	GetRobotStatus(robotID string) (string, error)
+	SetRobotBattery(robotID string, batteryLevel int, expiration time.Duration) error
+	GetRobotBattery(robotID string) (int, error)
+	SetRobotOnline(robotID string) error
+	IsRobotOnline(robotID string) (bool, error)
+
+	CheckRateLimit(key string, limit int, window time.Duration) (bool, error)
+}
+
 type Repository struct {
 	Robot
 	Inventory
@@ -50,9 +70,11 @@ type Repository struct {
 	WebsocketDashBoard
 	DashBoard
 	AI
+	Redis Redis // Добавляем Redis
 }
 
-func NewRepository(db *gorm.DB) *Repository {
+// Меняем конструктор чтобы принимать Redis клиент
+func NewRepository(db *gorm.DB, redisClient Redis) *Repository {
 	return &Repository{
 		Authorization:      postgres.NewAuthPostgres(db),
 		Robot:              postgres.NewRobotPostgres(db),
@@ -60,5 +82,15 @@ func NewRepository(db *gorm.DB) *Repository {
 		Inventory:          postgres.NewInventoryRepo(db),
 		DashBoard:          postgres.NewDashPostgres(db),
 		AI:                 postgres.NewAIPostgres(db),
+		Redis:              redisClient, // Передаем Redis клиент
 	}
+}
+
+// Helper метод для безопасной работы с Redis
+func (r *Repository) WithRedis(fn func(redis Redis) error) error {
+	if r.Redis == nil {
+		// Redis не доступен, пропускаем операцию
+		return nil
+	}
+	return fn(r.Redis)
 }

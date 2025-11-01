@@ -1,16 +1,24 @@
 package services
 
 import (
+	"encoding/json"
+	"time"
+
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
+	"github.com/sirupsen/logrus"
 )
 
-type DashSevice struct {
-	repo repository.DashBoard
+type DashService struct {
+	repo  repository.DashBoard
+	redis repository.Redis
 }
 
-func NewDashService(repo repository.DashBoard) *DashSevice {
-	return &DashSevice{repo: repo}
+func NewDashService(repo repository.DashBoard, redis repository.Redis) *DashService {
+	return &DashService{
+		repo:  repo,
+		redis: redis,
+	}
 }
 
 // получение данных о карте
