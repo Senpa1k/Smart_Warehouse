@@ -16,11 +16,13 @@ func NewAIPostgres(db *gorm.DB) *AIPostgres {
 	return &AIPostgres{db: db}
 }
 
+// getting the necessary data to send a request to the AI
 func (ai *AIPostgres) AIRequest(rq entities.AIRequest) ([]models.InventoryHistory, error) {
 	var products []models.InventoryHistory
 
 	startTime := time.Now().Add(-72 * time.Hour)
 
+	// creating an additional query to split the data into intervals and reduce the total number
 	subQuery := ai.db.
 		Table("inventory_history").
 		Select(`
@@ -31,6 +33,7 @@ func (ai *AIPostgres) AIRequest(rq entities.AIRequest) ([]models.InventoryHistor
 		Where("scanned_at >= ?", startTime).
 		Group("product_id, time_slot")
 
+	// create a query to get the necessary data from the database and select by category if any
 	query := ai.db.Select(`
 						inventory_history.id,
 						inventory_history.product_id,
@@ -52,6 +55,7 @@ func (ai *AIPostgres) AIRequest(rq entities.AIRequest) ([]models.InventoryHistor
 	return products, nil
 }
 
+// recording the response from the AI in the database
 func (ai *AIPostgres) AIResponse(rp entities.AIResponse) error {
 	for _, elem := range rp.Predictions {
 		predictionDate, err := time.Parse("2006-01-02", elem.PredictionDate)

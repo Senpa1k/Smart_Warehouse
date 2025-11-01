@@ -26,7 +26,8 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 			tx.Rollback()
 		}
 	}()
-
+	
+	// обработка результатов сканирования роботов
 	for _, scanResult := range data.ScanResults {
 		//проверка foreignkey и id_robot
 		var count int64
@@ -39,6 +40,7 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 			return fmt.Errorf("robot does not exist")
 		}
 
+		// построение экземпляра структуры истории инвентаризации
 		var inventoryHistory models.InventoryHistory = models.InventoryHistory{
 			RobotID:     data.RobotId,
 			ProductID:   scanResult.ProductId,
@@ -57,6 +59,7 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 		}
 	}
 
+	// парсинг информации о роботе
 	nextPoint := strings.Split(data.NextCheckpoint, "-")
 	row, err1 := strconv.Atoi(nextPoint[1])
 	shelf, err2 := strconv.Atoi(nextPoint[2])
@@ -69,6 +72,7 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 		return err2
 	}
 
+	// получение робота по id и обновление его полей 
 	var robot models.Robots
 	if err := tx.Where("id = ?", data.RobotId).First(&robot).Error; err != nil {
 		tx.Rollback()

@@ -14,6 +14,7 @@ func NewRobotService(repo repository.Robot, made chan<- interface{}) *RobotServi
 	return &RobotService{repo: repo, made: made}
 }
 
+// добавление данных о сканировании
 func (r *RobotService) AddData(data entities.RobotsData) error {
 	//проверка валидности данных
 

@@ -21,11 +21,14 @@ func NewWebsocketDashBoard(repo repository.WebsocketDashBoard, made <-chan inter
 	return &WebsocketDashBoardService{repo: repo, made: made}
 }
 
+// управление соединением с dashboard
 func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 	done := make(chan struct{})
 	var wg sync.WaitGroup
 
 	wg.Add(2)
+
+	// обработка сообщений
 	go func() {
 		defer wg.Done()
 	out:
@@ -51,6 +54,7 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 		}
 	}()
 
+	// поддержание соединения
 	go func() {
 		defer wg.Done()
 		defer close(done)
@@ -69,7 +73,9 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 	wg.Wait()
 }
 
+// отправка данных о сканировании роботом
 func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan entities.RobotsData) error {
+	// обновление данных о роботе
 	result := entities.UpdateRobot{}
 	updateRobot(&result, &scan)
 	err := conn.WriteJSON(map[string]interface{}{
@@ -80,6 +86,7 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 		return err
 	}
 
+	// обработка результатов сканирования
 	result2 := entities.InventoryAlert{}
 	for _, scanResult := range scan.ScanResults {
 		if scanResult.Status != "OK" {
@@ -99,9 +106,11 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 	return nil
 }
 
+// отправка данных о ии прогнозах
 func (r *WebsocketDashBoardService) ScannedAiSend(conn *websocket.Conn, scan entities.AIResponse) error {
 	result := entities.InventoryAlert{}
 
+	// обработка прогноза
 	for _, predict := range scan.Predictions {
 		if err := r.repo.InventoryAlertPredict(&result, predict); err == nil {
 			err := conn.WriteJSON(map[string]interface{}{
@@ -118,6 +127,7 @@ func (r *WebsocketDashBoardService) ScannedAiSend(conn *websocket.Conn, scan ent
 	return nil
 }
 
+// функция для приведения данных о роботе в удобный для обработки вид
 func updateRobot(ru *entities.UpdateRobot, data *entities.RobotsData) {
 	ru.ID = data.RobotId
 	ru.Status = "active"

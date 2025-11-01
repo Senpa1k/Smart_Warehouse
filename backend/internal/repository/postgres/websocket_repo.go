@@ -17,20 +17,24 @@ func NewWebsocketDashBoardPostgres(db *gorm.DB) *WebsocketDashBoardPostgres {
 	return &WebsocketDashBoardPostgres{db: db}
 }
 
+// создание оповещений на основе данных инвентаризации
 func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.InventoryAlert, timestemp time.Time, idProduct string) error {
 	var inventoryHistory models.InventoryHistory
 
+	// получение истории сканирования
 	err := w.db.Where("scanned_at = ? and product_id = ?", timestemp, idProduct).First(&inventoryHistory).Error
 	if err != nil {
 		return err
 	}
 
+	// получение названия продукта
 	var product string
 	err = w.db.Model(models.Products{}).Where("id = ?", inventoryHistory.ProductID).Select("name").Scan(&product).Error
 	if err != nil {
 		return err
 	}
 
+	// формирование оповещения
 	enti.Type = "inventory_alert"
 	enti.Data.ProductId = inventoryHistory.ProductID
 	enti.Data.ProductName = product
@@ -46,12 +50,16 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.Invent
 	return nil
 }
 
+
+// создание оповещений на основе предективной аналитики
 func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.InventoryAlert, predict entities.Predictions) error {
+	// получение информации о продукте
 	var product models.Products
 	if err := w.db.Where("id = ?", predict.ProductID).First(&product).Error; err != nil {
 		return fmt.Errorf("failed to get product: %w", err)
 	}
 
+	// получение информации о количестве продукта
 	var currentQuantity int
 	if err := w.db.Table("inventory_history").Where("product_id = ?", predict.ProductID).Select("COALESCE(quantity, 0)").Scan(&currentQuantity).Error; err != nil {
 		return fmt.Errorf("failed to get quantity: %w", err)
@@ -60,6 +68,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 	alertType := "predicted"
 	message := ""
 
+	// определение статуса прогноза
 	switch {
 	case predict.DaysUntilStockout <= 2:
 		message = fmt.Sprintf("КРИТИЧЕСКИЙ УРОВЕНЬ! Товар закончится через %d дней", predict.DaysUntilStockout)
@@ -76,6 +85,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 		status = "LOW_STOCK"
 	}
 
+	// формирование оповещения
 	enti.Type = "inventory_alert"
 	enti.Data.ProductId = predict.ProductID
 	enti.Data.ProductName = product.Name

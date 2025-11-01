@@ -13,6 +13,7 @@ func NewDashService(repo repository.DashBoard) *DashSevice {
 	return &DashSevice{repo: repo}
 }
 
+// получение данных о карте
 func (d *DashSevice) GetDashInfo(dash *entities.DashInfo) error {
 	return d.repo.GetDashInfo(dash)
 }
