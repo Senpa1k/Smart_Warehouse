@@ -28,14 +28,13 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 
 	wg.Add(2)
 
-	// обработка сообщений
 	go func() {
 		defer wg.Done()
 	out:
 		for {
 			select {
 			case who := <-r.made: // либо робот либо аи преддикты
-				if scan, ok := who.(entities.RobotsData); ok { // robot
+				if scan, ok := who.(entities.RobotsData); ok { // пришли данные от робота
 					if err := r.ScannedRobotSend(conn, scan); err != nil {
 						logrus.Print("Websocket was closed")
 						break
@@ -74,7 +73,6 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 
 // отправка данных о сканировании роботом
 func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan entities.RobotsData) error {
-	// обновление данных о роботе
 	result := entities.UpdateRobot{}
 	updateRobot(&result, &scan)
 	err := conn.WriteJSON(map[string]interface{}{

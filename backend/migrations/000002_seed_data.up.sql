@@ -13,3 +13,4 @@ INSERT INTO robots (id, status, battery_level) VALUES
 ('RB-003', 'active', 10),
 ('RB-004', 'active', 100),
 ('RB-005', 'active', 70);
+

@@ -70,10 +70,9 @@ type Repository struct {
 	WebsocketDashBoard
 	DashBoard
 	AI
-	Redis Redis // Добавляем Redis
+	Redis Redis
 }
 
-// Меняем конструктор чтобы принимать Redis клиент
 func NewRepository(db *gorm.DB, redisClient Redis) *Repository {
 	return &Repository{
 		Authorization:      postgres.NewAuthPostgres(db),
@@ -82,14 +81,13 @@ func NewRepository(db *gorm.DB, redisClient Redis) *Repository {
 		Inventory:          postgres.NewInventoryRepo(db),
 		DashBoard:          postgres.NewDashPostgres(db),
 		AI:                 postgres.NewAIPostgres(db),
-		Redis:              redisClient, // Передаем Redis клиент
+		Redis:              redisClient,
 	}
 }
 
-// Helper метод для безопасной работы с Redis
+// метод для безопасной работы с Redis
 func (r *Repository) WithRedis(fn func(redis Redis) error) error {
 	if r.Redis == nil {
-		// Redis не доступен, пропускаем операцию
 		return nil
 	}
 	return fn(r.Redis)

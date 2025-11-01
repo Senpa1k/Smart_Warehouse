@@ -16,6 +16,7 @@ const (
 	robotCtx            = "robotId"
 )
 
+// валидация jwt токенов
 func (h *Handler) UserIdentity(c *gin.Context) {
 
 	header := c.GetHeader(authorizationHeader)
@@ -44,6 +45,7 @@ func (h *Handler) UserIdentity(c *gin.Context) {
 	c.Set(userCtx, userID)
 }
 
+// валидация id роботов
 func (h *Handler) RobotIdentity(c *gin.Context) {
 	header := c.GetHeader("Authorization")
 	if header == "" {
@@ -65,6 +67,7 @@ func (h *Handler) RobotIdentity(c *gin.Context) {
 	c.Set(robotCtx, robotID)
 }
 
+// проверка header у вебсокета
 func (h *Handler) WebsocketIdentity(c *gin.Context) {
 	if c.GetHeader("Connection") != "Upgrade" {
 		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header Connections").Error())

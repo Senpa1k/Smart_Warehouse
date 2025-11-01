@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// структыры таблиц бд для сопоставления с gorm
+
 type Users struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement;type:serial" json:"id"`
 	Email        string    `gorm:"unique;not null;type:varchar(255)" json:"email" binding:"required"`

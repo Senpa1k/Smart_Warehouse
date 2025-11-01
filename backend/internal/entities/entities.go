@@ -6,6 +6,7 @@ import (
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 )
 
+// структура для данных от роботоа
 type RobotsData struct {
 	RobotId   string    `json:"robot_id" binding:"required"`
 	Timestamp time.Time `json:"timestamp" binding:"required"`
@@ -26,6 +27,7 @@ type ScanResults struct {
 	Status      string `json:"status" binding:"required"`
 }
 
+// структура для дашборда
 type DashInfo struct {
 	ListRobots []models.Robots              `json:"robots"`
 	ListScans  [100]models.InventoryHistory `json:"recent_scans"`
@@ -40,6 +42,7 @@ type Statistics struct {
 	AvgBattery        int `json:"avg_battery"`
 }
 
+// структуры для вебсокетов
 type InventoryAlert struct {
 	Type string `json:"type"`
 	Data struct {
@@ -66,6 +69,7 @@ type UpdateRobot struct {
 	CurrentShelf int       `gorm:"type:int" json:"current_shelf"`
 }
 
+// для работы с ИИ
 type AIRequest struct {
 	PeriodDays int      `json:"period_days" binding:"required"`
 	Categories []string `json:"categories" binding:"required"`
@@ -78,13 +82,14 @@ type AIResponse struct {
 
 type Predictions struct {
 	ProductID         string  `json:"product_id"`
-	ProductName		  string  `json:"product_name"`
+	ProductName       string  `json:"product_name"`
 	PredictionDate    string  `json:"prediction_date"`
 	DaysUntilStockout int     `json:"days_until_stockout"`
 	RecommendedOrder  int     `json:"recommended_order"`
 	ConfidenceScore   float64 `json:"confidence_score"`
 }
 
+// струтуры для импортов и экспортов
 type ImportResult struct {
 	SuccessCount int      `json:"success_count"`
 	FailedCount  int      `json:"failed_count"`

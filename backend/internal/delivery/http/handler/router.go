@@ -21,6 +21,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 	router.Use(h.RateLimitMiddleware())
 
+	// разрешаем cors
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost", "http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},

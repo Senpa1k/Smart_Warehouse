@@ -1,3 +1,7 @@
+/*
+Точка входа главного приложения, запускающая REST api сервис
+*/
+
 package main
 
 import (
@@ -14,7 +18,7 @@ import (
 func main() {
 	logrus.SetFormatter(new(logrus.JSONFormatter))
 
-	db, err := repository.InitBD()
+	db, err := repository.InitBD() // инициализация бд
 	if err != nil {
 		logrus.Fatalf("fatal initializetion db, %s", err.Error())
 	}
@@ -24,7 +28,7 @@ func main() {
 		logrus.Warnf("Could not get REDIS_URL from environment: %v", err)
 		redisURL = ""
 	}
-	redisClient, err := repository.NewRedisClient(redisURL)
+	redisClient, err := repository.NewRedisClient(redisURL) // инициализация redis клиента
 	if err != nil {
 		logrus.Warnf("Redis connection failed: %v", err)
 		logrus.Info("Application will continue without Redis caching")
@@ -34,14 +38,15 @@ func main() {
 		defer redisClient.Close()
 	}
 
-	repos := repository.NewRepository(db, redisClient)
-	services := service.NewService(repos)
-	handler := handler.NewHandler(services)
+	// сервис разделё на 3 слоя
+	repos := repository.NewRepository(db, redisClient) // слой репозитория для работы с бд
+	services := service.NewService(repos)              // слой сервисов для работы с бизнес логикой
+	handler := handler.NewHandler(services)            // слой хэндлеров для отловки запросов
 
 	done := make(chan struct{})
 
 	srv := new(server.Server)
-	go func() {
+	go func() { // инициализируем сервер
 		if err := srv.Run("3000", handler.InitRoutes()); err != nil {
 			logrus.Fatalf("error in init http server: %s", err.Error())
 		}

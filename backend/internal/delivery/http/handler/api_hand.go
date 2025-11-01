@@ -54,7 +54,7 @@ func (h *Handler) WebsocketDashBoard(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	// ✅ НОВОЕ: Подписываемся на Redis channel
+	// Подписываемся на Redis channel
 	if h.services.Redis != nil {
 		go h.HandleRedisSubscriptions(conn)
 	}
@@ -64,7 +64,7 @@ func (h *Handler) WebsocketDashBoard(c *gin.Context) {
 	logrus.Print("вебсокет закрыт")
 }
 
-// ✅ НОВАЯ ФУНКЦИЯ: Обработка Redis подписок
+// Обработка Redis подписок
 func (h *Handler) HandleRedisSubscriptions(conn *websocket.Conn) {
 	ctx := context.Background()
 
@@ -85,8 +85,7 @@ func (h *Handler) HandleRedisSubscriptions(conn *websocket.Conn) {
 			logrus.Errorf("WebSocket send error: %v", err)
 			return
 		}
-
-		logrus.Info("📨 Sent Redis message to WebSocket client")
+		logrus.Info("Sent Redis message to WebSocket client")
 	}
 }
 

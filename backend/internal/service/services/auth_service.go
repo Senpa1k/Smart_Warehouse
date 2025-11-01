@@ -46,6 +46,7 @@ func (s *AuthService) GetUser(email string, password string) (string, *models.Us
 	return token, in, nil
 }
 
+// function of parse token
 func (s *AuthService) ParseToken(accessToken string) (uint, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

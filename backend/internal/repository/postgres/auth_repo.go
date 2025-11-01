@@ -1,6 +1,8 @@
 package postgres
 
 import (
+	"fmt"
+
 	"github.com/Senpa1k/Smart_Warehouse/internal/models"
 	"gorm.io/gorm"
 )
@@ -15,6 +17,7 @@ func NewAuthPostgres(db *gorm.DB) *AuthPostgres {
 
 // adding a user to the database
 func (r *AuthPostgres) CreateUser(user models.Users) (uint, error) {
+	fmt.Println(user.PasswordHash)
 	result := r.db.Create(&user)
 	if err := result.Error; err != nil {
 		return 0, err

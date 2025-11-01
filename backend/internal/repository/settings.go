@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// инициализация базы данных
 func InitBD() (*gorm.DB, error) {
 	dns, err := config.Get("DATABASE_URL")
 	if err != nil {
