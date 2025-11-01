@@ -50,29 +50,39 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 	model.SystemInstruction = "Ты - AI ассистент для анализа складских запасов. Анализируй данные инвентаризации и прогнозируй остатки товаров. Отвечай ТОЛЬКО в формате JSON."
 	model.Temperature = 0.2
 	model.TopP = 0.2
-	model.MaxTokens = 2000
+	model.MaxTokens = 3500
 	model.RepetitionPenalty = 1.2
 
 	messages := []gigago.Message{
-		{Role: gigago.RoleUser, Content: `Проанализируй данные складских запасов указанные в этом json` + string(assistantRequest) + `и спрогнозируй остатки на количество дней равное ` + strconv.Itoa(rq.PeriodDays) +
-			` Проанализируй тенденции потребления для каждого товара и спрогнозируй:
+		{Role: gigago.RoleUser, Content: `Анализ складских запасов - прогноз на ` + strconv.Itoa(rq.PeriodDays) + ` дней. ДАННЫЕ ДЛЯ АНАЛИЗА:` + string(assistantRequest) +
+			`
+
+			ЗАДАЧА:
+			Проанализируй тенденции потребления для каждого товара и спрогнозируй:
 				1. Через сколько дней закончатся запасы (days_until_stockout)
 				2. Рекомендуемое количество для заказа (recommended_order_quantity)
 				3. Достоверность прогноза (confidence) от 0.0 до 1.0
 
-				Верни ответ в формате JSON, напиши prediction_date в формате dd.mm.yyyy:
-				{
-					"predictions": [
-						{
-							"product_id": string,
-							"prediction_date": string
-							"days_until_stockout": int,
-							"recommended_order": int,
-							"confidence_score": float,
-						}
-					]
-					"confidence": float,
-				}
+
+			ТРЕБОВАНИЯ К ОТВЕТУ:
+			- prediction_date должен быть: сегодняшней датой
+			- Используй product_id и product_name из предоставленных данных
+			- Ответ должен быть в точном JSON формате
+
+			ФОРМАТ ОТВЕТА:
+			{
+				"predictions": [
+					{
+						"product_id": "string",
+						"product_name: "string",
+						"prediction_date": "dd.mm.yyyy",
+						"days_until_stockout": "int",
+						"recommended_order": "int",
+						"confidence_score": "float",
+					}
+				],
+				"confidence": "float",
+			}
 
 				Только JSON, без дополнительного текста.`,
 		},
