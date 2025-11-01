@@ -11,32 +11,26 @@ import (
 func main() {
 	logrus.SetFormatter(new(logrus.JSONFormatter))
 	logrus.Info("🎯 Starting Final Redis Integration Test...")
-
-	// 1. Подключаемся к Redis
 	redisClient, err := repository.NewRedisClient("redis://localhost:6379")
 	if err != nil {
-		logrus.Fatalf("❌ Redis connection failed: %v", err)
+		logrus.Fatalf("Redis connection failed: %v", err)
 	}
 	defer redisClient.Close()
 
-	logrus.Info("✅ Redis connected successfully")
+	logrus.Info("Redis connected successfully")
 
-	// 2. Тест статусов роботов
 	testRobotStatuses(redisClient)
 
-	// 3. Тест Rate Limiting
 	testRateLimiting(redisClient)
 
-	// 4. Тест Pub/Sub
 	testPubSub(redisClient)
 
-	logrus.Info("🎉 All Redis features working correctly! 4th stage completed!")
+	logrus.Info("All Redis features working correctly! 4th stage completed!")
 }
 
 func testRobotStatuses(redis repository.Redis) {
-	logrus.Info("🤖 Testing robot status management...")
+	logrus.Info("Testing robot status management...")
 
-	// Сохраняем статусы тестовых роботов
 	robots := []struct {
 		id      string
 		battery int
@@ -48,15 +42,13 @@ func testRobotStatuses(redis repository.Redis) {
 	}
 
 	for _, robot := range robots {
-		// Сохраняем статус
 		redis.SetRobotStatus(robot.id, robot.status, time.Minute)
 		redis.SetRobotBattery(robot.id, robot.battery, time.Minute)
 		redis.SetRobotOnline(robot.id)
 
-		logrus.Infof("✅ Robot %s: battery=%d%%, status=%s", robot.id, robot.battery, robot.status)
+		logrus.Infof("Robot %s: battery=%d%%, status=%s", robot.id, robot.battery, robot.status)
 	}
 
-	// Проверяем чтение
 	for _, robot := range robots {
 		online, _ := redis.IsRobotOnline(robot.id)
 		battery, _ := redis.GetRobotBattery(robot.id)
