@@ -56,22 +56,51 @@ const Header: React.FC<HeaderProps> = ({ onUploadCSV }) => {
       <Toolbar>
         {/* Logo and Title */}
         <Box
-          component="img"
-          src="/logo-rostelecom-white.svg"
-          alt="Ростелеком"
-          sx={{ height: 40, mr: 2 }}
-          onError={(e: any) => {
-            e.target.style.display = 'none';
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            mr: 4,
+            backgroundColor: 'white',
+            borderRadius: '30px',
+            padding: '11px 18px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
           }}
-        />
+        >
+          <Box
+            component="img"
+            src="/logo.png"
+            alt="Ростелеком"
+            sx={{ height: 45, mr: 2, marginTop: '-12px' }}
+          />
+          <Typography
+            variant="h6"
+            sx={{
+              color: '#2B2D42',
+              fontWeight: 700,
+              fontSize: '1.1rem'
+            }}
+          >
+            Умный склад
+          </Typography>
+        </Box>
 
         {/* Navigation Tabs */}
         <Tabs
           value={getCurrentTab()}
           onChange={handleTabChange}
-          textColor="inherit"
-          indicatorColor="secondary"
-          sx={{ flexGrow: 1 }}
+          TabIndicatorProps={{
+            style: { backgroundColor: '#FF6600', height: 3 }
+          }}
+          sx={{
+            flexGrow: 1,
+            '& .MuiTab-root': {
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontWeight: 600,
+              '&.Mui-selected': {
+                color: 'white'
+              }
+            }
+          }}
         >
           <Tab label="Текущий мониторинг" value="/dashboard" />
           <Tab label="Исторические данные" value="/history" />
@@ -81,9 +110,16 @@ const Header: React.FC<HeaderProps> = ({ onUploadCSV }) => {
         {onUploadCSV && (
           <Button
             variant="outlined"
-            color="inherit"
             onClick={onUploadCSV}
-            sx={{ mr: 2 }}
+            sx={{
+              mr: 2,
+              borderColor: 'white',
+              color: 'white',
+              '&:hover': {
+                borderColor: '#FF6600',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
           >
             Загрузить CSV
           </Button>
@@ -91,10 +127,10 @@ const Header: React.FC<HeaderProps> = ({ onUploadCSV }) => {
 
         {/* User Menu */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ mr: 1 }}>
+          <Typography variant="body2" sx={{ mr: 1, color: 'white' }}>
             {user?.name || 'Пользователь'}
           </Typography>
-          <Typography variant="caption" color="inherit" sx={{ mr: 2, opacity: 0.7 }}>
+          <Typography variant="caption" sx={{ mr: 2, color: 'rgba(255, 255, 255, 0.8)' }}>
             ({user?.role || 'operator'})
           </Typography>
           <IconButton
@@ -103,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({ onUploadCSV }) => {
             aria-controls="menu-appbar"
             aria-haspopup="true"
             onClick={handleMenu}
-            color="inherit"
+            sx={{ color: 'white' }}
           >
             <AccountCircle />
           </IconButton>

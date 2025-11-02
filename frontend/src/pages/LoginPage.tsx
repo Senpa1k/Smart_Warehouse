@@ -141,18 +141,20 @@ const LoginPage: React.FC = () => {
           {/* Logo */}
           <Box
             component="img"
-            src="/logo-rostelecom.svg"
+            src="/logo.png"
             alt="Ростелеком"
             sx={{
-              height: 70,
-              mb: 2
-            }}
-            onError={(e: any) => {
-              e.target.style.display = 'none';
+              maxWidth: '300px',
+              height: 'auto',
+              mb: 1
             }}
           />
 
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="h5" color="primary" sx={{ mb: 1, fontWeight: 600 }}>
+            Умный склад
+          </Typography>
+
+          <Typography variant="body2" sx={{ mb: 3, color: '#7209B7' }}>
             Войдите в систему для продолжения работы
           </Typography>
 
