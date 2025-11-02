@@ -15,3 +15,6 @@ INSERT INTO robots (id, status, battery_level) VALUES
 ('RB-005', 'active', 70);
 
 INSERT INTO users (name, role, email, password_hash) VALUES ('Test', 'admin', 'test1@gmail.com', 'f4f3434631dfac32acd8c600c0e320c42f8c9d6f');
+
+
+
