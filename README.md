@@ -8,67 +8,65 @@
 
 ```mermaid
 flowchart TB
-    %% === Frontend (свернуто вертикально) ===
-    subgraph FE["Frontend\nReact + TS"]
-        A[App]
-        B[MUI]
-        C[Redux]
-        D[WS Client]
+    %% Frontend Layer
+    subgraph Frontend["Frontend Layer<br/>React + TypeScript"]
+        A[React App] 
+        B[MUI Components]
+        C[Redux Store]
+        D[WebSocket Client]
+        
         A --> B
         A --> C
         A --> D
     end
 
-    %% === Backend (свернуто в 2 колонки внутри) ===
-    subgraph BE["Backend\nGo + Gin"]
-        direction TB
+    %% Backend Layer
+    subgraph Backend["Backend Layer<br/>Go + Gin"]
         E[API Server]
-        subgraph BE_MODS[""]
-            direction LR
-            F[Auth]
-            G[WS Mgr]
-            H[REST]
-            I[GigaChat]
-        end
+        F[JWT Auth]
+        G[WebSocket Manager]
+        H[REST API]
+        I[GigaChat Integration]
+        
         E --> F
         E --> G
         E --> H
         E --> I
     end
 
-    %% === Data Layer ===
-    subgraph DB["Data"]
-        J[PostgreSQL]
-        K[Redis]
+    %% Data Layer
+    subgraph Data["Data Layer"]
+        J[PostgreSQL<br/>Основная БД]
+        K[Redis<br/>Кэш & WebSocket]
     end
 
-    %% === External ===
-    subgraph EX["External"]
-        L[Robot Emulator]
-        M[GigaChat AI]
+    %% External Services
+    subgraph External["External Services"]
+        L[Robot Emulator<br/>Python]
+        M[GigaChat AI<br/>Sber API]
     end
 
-    %% === Connections между слоями ===
-    A <-->|HTTP| E
-    D <-->|WS| G
+    %% Connections
+    A <-->|HTTP/REST| E
+    D <-->|WebSocket| G
     E <-->|SQL| J
     E <-->|Pub/Sub| K
-    E <-->|API| M
-    L -->|Data| E
+    E <-->|REST API| M
+    L -->|Robot Data| E
 
-    %% === Стили ===
-    classDef fe fill:#61dafb,color:#000
-    classDef be fill:#00add8,color:#000
-    classDef db fill:#336791,color:#fff
+    %% Styling
+    classDef frontend fill:#61dafb,color:#000
+    classDef backend fill:#00add8,color:#000
+    classDef database fill:#336791,color:#fff
     classDef cache fill:#d82c20,color:#fff
-    classDef ext fill:#3776ab,color:#fff
+    classDef external fill:#3776ab,color:#fff
     classDef ai fill:#ff6b35,color:#fff
-
-    class A,B,C,D fe
-    class E,F,G,H,I be
-    class J db
+    
+    class A,B,C,D frontend
+    class E,F,G,H,I backend
+    class J database
     class K cache
-    class L ext
+    class L external
     class M ai
 ```
 ## 🚀 Быстрый старт
