@@ -8,45 +8,47 @@ import (
 	"gorm.io/gorm"
 )
 
+// InventoryRepo reads and writes inventory records in PostgreSQL.
 type InventoryRepo struct {
 	db *gorm.DB
 }
 
+// NewInventoryRepo constructs the PostgreSQL inventory repository.
 func NewInventoryRepo(db *gorm.DB) *InventoryRepo {
 	return &InventoryRepo{db: db}
 }
 
-// вставка данных в бд по 100 записей
+// ImportInventoryHistories inserts scan history in batches of 100.
 func (r *InventoryRepo) ImportInventoryHistories(histories []models.InventoryHistory) error {
 	return r.db.CreateInBatches(histories, 100).Error
 }
 
-// получение данных инвентаризации по id продуктов
+// GetInventoryHistoryByProductIDs loads scans for the selected products.
 func (r *InventoryRepo) GetInventoryHistoryByProductIDs(productIDs []string) ([]models.InventoryHistory, error) {
 	var histories []models.InventoryHistory
 	err := r.db.Preload("Robot").Preload("Product").Where("product_id IN ?", productIDs).Find(&histories).Error
 	return histories, err
 }
 
-// получение данных инвентаризации по id сканирований роботами
+// GetInventoryHistoryByScanIDs loads scans by their history IDs.
 func (r *InventoryRepo) GetInventoryHistoryByScanIDs(scanIDs []string) ([]models.InventoryHistory, error) {
 	var histories []models.InventoryHistory
 	err := r.db.Preload("Robot").Preload("Product").Where("id IN ?", scanIDs).Find(&histories).Error
 	return histories, err
 }
 
-// получение продукта по id
+// GetProductByID checks whether a product exists by ID.
 func (r *InventoryRepo) GetProductByID(productID string) error {
 	var product models.Products
 	return r.db.First(&product, "id = ?", productID).Error
 }
 
-// добавление продукта в бд
+// CreateProduct inserts a catalog product.
 func (r *InventoryRepo) CreateProduct(product *models.Products) error {
 	return r.db.Create(product).Error
 }
 
-// обновление данных о продукте
+// UpdateProduct saves changes to a catalog product.
 func (r *InventoryRepo) UpdateProduct(product *models.Products) error {
 	return r.db.Save(product).Error
 }
@@ -66,17 +68,17 @@ func parseDateTime(dateStr string) (time.Time, error) {
 
 	var lastErr error
 	for _, format := range formats {
-		if t, err := time.Parse(format, dateStr); err == nil {
+		t, err := time.Parse(format, dateStr)
+		if err == nil {
 			return t, nil
-		} else {
-			lastErr = err
 		}
+		lastErr = err
 	}
 
 	return time.Time{}, lastErr
 }
 
-// фильтрация данных инвентаризации с пагинацией
+// GetHistory filters and paginates inventory scans.
 func (r *InventoryRepo) GetHistory(from, to, zone, status string, limit, offset int) ([]models.InventoryHistory, int64, error) {
 	var histories []models.InventoryHistory
 	var total int64

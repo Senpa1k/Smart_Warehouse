@@ -1,3 +1,4 @@
+// Package handler serves warehouse HTTP and WebSocket requests.
 package handler
 
 import (
@@ -13,13 +14,14 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
+	CheckOrigin: func(_ *http.Request) bool {
 		return true // для разрабы
 	},
 	WriteBufferSize: 1024,
 	ReadBufferSize:  10,
 }
 
+// Robots accepts inventory scans sent by an authenticated robot.
 func (h *Handler) Robots(c *gin.Context) {
 	_, ok := c.Get(robotCtx)
 	if !ok {
@@ -33,26 +35,31 @@ func (h *Handler) Robots(c *gin.Context) {
 		return
 	}
 
-	err := h.services.Robot.AddData(rd)
+	err := h.services.AddData(rd)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	logrus.Print("data received successfuly")
+	logrus.Print("data received successfully")
 	c.JSON(http.StatusOK, gin.H{
 		"status":     "received",
 		"message_id": "tmp_message_id",
 	})
 }
 
+// WebsocketDashBoard upgrades a dashboard request to a WebSocket connection.
 func (h *Handler) WebsocketDashBoard(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logrus.Error("upgrade error with socket")
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			logrus.WithError(err).Warn("close WebSocket connection")
+		}
+	}()
 
 	// Подписываемся на Redis channel
 	if h.services.Redis != nil {
@@ -60,17 +67,21 @@ func (h *Handler) WebsocketDashBoard(c *gin.Context) {
 	}
 
 	// Старая логика
-	h.services.WebsocketDashBoard.RunStream(conn)
+	h.services.RunStream(conn)
 	logrus.Print("вебсокет закрыт")
 }
 
-// Обработка Redis подписок
+// HandleRedisSubscriptions forwards Redis robot updates to a WebSocket client.
 func (h *Handler) HandleRedisSubscriptions(conn *websocket.Conn) {
 	ctx := context.Background()
 
 	// Подписываемся на канал robot_updates
 	pubsub := h.services.Redis.Subscribe("robot_updates")
-	defer pubsub.Close()
+	defer func() {
+		if err := pubsub.Close(); err != nil {
+			logrus.WithError(err).Warn("close Redis subscription")
+		}
+	}()
 
 	for {
 		msg, err := pubsub.ReceiveMessage(ctx)
@@ -89,6 +100,7 @@ func (h *Handler) HandleRedisSubscriptions(conn *websocket.Conn) {
 	}
 }
 
+// GetDashInfo returns the current warehouse dashboard snapshot.
 func (h *Handler) GetDashInfo(c *gin.Context) {
 	_, ok := c.Get(userCtx)
 	if !ok {
@@ -96,16 +108,17 @@ func (h *Handler) GetDashInfo(c *gin.Context) {
 		return
 	}
 
-	var dash entities.DashInfo = entities.DashInfo{}
-	if err := h.services.DashBoard.GetDashInfo(&dash); err != nil {
+	dash := entities.DashInfo{}
+	if err := h.services.GetDashInfo(&dash); err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	logrus.Print("dashinfo update successfuly")
+	logrus.Print("dashinfo update successfully")
 	c.JSON(http.StatusOK, dash)
 }
 
+// AIRequest requests inventory predictions and writes them to the response.
 func (h *Handler) AIRequest(c *gin.Context) {
 	_, ok := c.Get(userCtx)
 	if !ok {
@@ -119,19 +132,20 @@ func (h *Handler) AIRequest(c *gin.Context) {
 		return
 	}
 
-	res, err := h.services.AI.Predict(air)
+	res, err := h.services.Predict(air)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	logrus.Print("ai request send successfuly")
+	logrus.Print("ai request send successfully")
 	c.JSON(http.StatusOK, gin.H{
 		"predictions": res.Predictions,
 		"confidence":  res.Confidence,
 	})
 }
 
+// ExportExcel downloads selected inventory scans as an Excel workbook.
 func (h *Handler) ExportExcel(c *gin.Context) {
 	userID, ok := c.Get(userCtx)
 	if !ok {
@@ -140,18 +154,18 @@ func (h *Handler) ExportExcel(c *gin.Context) {
 	}
 	_ = userID
 
-	productIdStr := c.Query("ids")
-	if productIdStr == "" {
+	productIDStr := c.Query("ids")
+	if productIDStr == "" {
 		NewResponseError(c, http.StatusBadRequest, "ids query parameter is required")
 		return
 	}
 
-	productIDs := strings.Split(productIdStr, ",")
+	productIDs := strings.Split(productIDStr, ",")
 	for i, id := range productIDs {
 		productIDs[i] = strings.TrimSpace(id)
 	}
 
-	exelFile, err := h.services.Inventory.ExportExcel(productIDs)
+	exelFile, err := h.services.ExportExcel(productIDs)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, "export failed: "+err.Error())
 		return
@@ -160,6 +174,7 @@ func (h *Handler) ExportExcel(c *gin.Context) {
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", exelFile)
 }
 
+// ImportInventory imports uploaded CSV inventory records.
 func (h *Handler) ImportInventory(c *gin.Context) {
 	userID, ok := c.Get(userCtx)
 	if !ok {
@@ -173,9 +188,13 @@ func (h *Handler) ImportInventory(c *gin.Context) {
 		NewResponseError(c, http.StatusBadRequest, "failed to get file: "+err.Error())
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			logrus.WithError(closeErr).Warn("close imported file")
+		}
+	}()
 
-	result, err := h.services.Inventory.ImportCSV(file)
+	result, err := h.services.ImportCSV(file)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, "import failed: "+err.Error())
 		return
@@ -204,7 +223,7 @@ func (h *Handler) exportInventoryHistory(c *gin.Context) {
 		query.Limit = 1000
 	}
 
-	historyData, err := h.services.Inventory.GetHistory(query.From, query.To, query.Zone, query.Status, query.Limit, query.Offset)
+	historyData, err := h.services.GetHistory(query.From, query.To, query.Zone, query.Status, query.Limit, query.Offset)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, "failed to get history: "+err.Error())
 		return
@@ -213,7 +232,7 @@ func (h *Handler) exportInventoryHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, historyData)
 }
 
-// Получение статусов всех роботов
+// GetRobotsStatus reports the online state of the configured demo robots.
 func (h *Handler) GetRobotsStatus(c *gin.Context) {
 	if h.services.Redis == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -227,7 +246,7 @@ func (h *Handler) GetRobotsStatus(c *gin.Context) {
 	// Для демо используем тестовые ID
 	robotIDs := []string{"RB-001", "RB-002", "RB-003", "RB-004", "RB-005"}
 
-	statuses := make(map[string]interface{})
+	statuses := make(map[string]any)
 	onlineCount := 0
 	totalBattery := 0
 
@@ -241,7 +260,7 @@ func (h *Handler) GetRobotsStatus(c *gin.Context) {
 			totalBattery += battery
 		}
 
-		statuses[robotID] = map[string]interface{}{
+		statuses[robotID] = map[string]any{
 			"online":        online,
 			"battery_level": battery,
 			"status":        status,

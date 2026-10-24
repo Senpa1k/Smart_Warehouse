@@ -14,26 +14,29 @@ import (
 
 type tokenClaims struct {
 	jwt.StandardClaims
-	UserId uint `json:"user_id"`
+	UserID uint `json:"user_id"`
 }
 
+// AuthService registers users and manages their access tokens.
 type AuthService struct {
 	repo repository.Authorization
 }
 
+// NewAuthService constructs the authentication service.
 func NewAuthService(repo repository.Authorization) *AuthService {
 	return &AuthService{repo: repo}
 }
 
+// CreateUser hashes a password and stores the new account.
 func (s *AuthService) CreateUser(user models.Users) (uint, error) {
 	user.PasswordHash = generateHashPassword(user.PasswordHash)
 	return s.repo.CreateUser(user)
 }
 
-func (s *AuthService) GetUser(email string, password string) (string, *models.Users, error) {
+// GetUser checks credentials and issues a token for a matching user.
+func (s *AuthService) GetUser(email, password string) (string, *models.Users, error) {
 	// checking the presence of the user in the database
 	in, err := s.repo.GetUser(email, generateHashPassword(password))
-
 	if err != nil {
 		return "", nil, err
 	}
@@ -46,15 +49,15 @@ func (s *AuthService) GetUser(email string, password string) (string, *models.Us
 	return token, in, nil
 }
 
-// function of parse token
+// ParseToken validates an access token and extracts its user ID.
 func (s *AuthService) ParseToken(accessToken string) (uint, error) {
-	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid signing method")
 		}
-		jwt_secret, _ := config.Get("JWT_SECRET") // jwt_secret будет доступен в контейнере
+		jwtSecret, _ := config.Get("JWT_SECRET") // jwtSecret будет доступен в контейнере
 
-		return []byte(jwt_secret), nil
+		return []byte(jwtSecret), nil
 	})
 	if err != nil {
 		return 0, err
@@ -64,7 +67,7 @@ func (s *AuthService) ParseToken(accessToken string) (uint, error) {
 		return 0, errors.New("token claims are not in tokenClaims")
 	}
 
-	return claims.UserId, nil
+	return claims.UserID, nil
 }
 
 func generateHashPassword(password string) string {
@@ -85,7 +88,7 @@ func generateJWTToken(id uint) string {
 		id,
 	})
 
-	jwt_secret, _ := config.Get("JWT_SECRET")
-	str, _ := token.SignedString([]byte(jwt_secret))
+	jwtSecret, _ := config.Get("JWT_SECRET")
+	str, _ := token.SignedString([]byte(jwtSecret))
 	return str
 }

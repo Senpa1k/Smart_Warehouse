@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/entities"
@@ -11,39 +9,47 @@ import (
 	"gorm.io/gorm"
 )
 
+// RobotPostgres persists robot scans and positions in PostgreSQL.
 type RobotPostgres struct {
 	db *gorm.DB
 }
 
+// NewRobotPostgres constructs the PostgreSQL robot repository.
 func NewRobotPostgres(db *gorm.DB) *RobotPostgres {
 	return &RobotPostgres{db: db}
 }
 
+// AddData stores a robot scan and updates its current position.
 func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обработать ошибки типа неправ знач в поле
+	zone, row, shelf, err := entities.ParseCheckpoint(data.NextCheckpoint)
+	if err != nil {
+		return err
+	}
+
 	tx := r.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
 		}
 	}()
-	
+
 	// обработка результатов сканирования роботов
 	for _, scanResult := range data.ScanResults {
-		//проверка foreignkey и id_robot
+		// проверка foreignkey и id_robot
 		var count int64
-		if tx.Model(&models.Products{}).Where("id = ?", scanResult.ProductId).Count(&count); count == 0 {
+		if tx.Model(&models.Products{}).Where("id = ?", scanResult.ProductID).Count(&count); count == 0 {
 			tx.Rollback()
 			return fmt.Errorf("product does not exist")
 		}
-		if tx.Model(&models.Robots{}).Where("id = ?", data.RobotId).Count(&count); count == 0 {
+		if tx.Model(&models.Robots{}).Where("id = ?", data.RobotID).Count(&count); count == 0 {
 			tx.Rollback()
 			return fmt.Errorf("robot does not exist")
 		}
 
 		// построение экземпляра структуры истории инвентаризации
-		var inventoryHistory models.InventoryHistory = models.InventoryHistory{
-			RobotID:     data.RobotId,
-			ProductID:   scanResult.ProductId,
+		inventoryHistory := models.InventoryHistory{
+			RobotID:     data.RobotID,
+			ProductID:   scanResult.ProductID,
 			Quantity:    scanResult.Quantity,
 			Zone:        data.Location.Zone,
 			RowNumber:   data.Location.Row,
@@ -60,26 +66,14 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 	}
 
 	// парсинг информации о роботе
-	nextPoint := strings.Split(data.NextCheckpoint, "-")
-	row, err1 := strconv.Atoi(nextPoint[1])
-	shelf, err2 := strconv.Atoi(nextPoint[2])
-	if err1 != nil {
-		tx.Rollback()
-		return err1
-	}
-	if err2 != nil {
-		tx.Rollback()
-		return err2
-	}
-
-	// получение робота по id и обновление его полей 
+	// получение робота по id и обновление его полей
 	var robot models.Robots
-	if err := tx.Where("id = ?", data.RobotId).First(&robot).Error; err != nil {
+	if err := tx.Where("id = ?", data.RobotID).First(&robot).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 	robot.BatteryLevel = data.BatteryLevel
-	robot.CurrentZone = nextPoint[0]
+	robot.CurrentZone = zone
 	robot.CurrentRow = row
 	robot.CurrentShelf = shelf
 	if err := tx.Save(&robot).Error; err != nil {
@@ -90,7 +84,8 @@ func (r *RobotPostgres) AddData(data entities.RobotsData) error { // обраб�
 	return tx.Commit().Error
 }
 
-func (r *RobotPostgres) CheckId(robotID string) bool {
+// CheckID reports whether a robot with the given ID exists.
+func (r *RobotPostgres) CheckID(robotID string) bool {
 	var count int64
 	err := r.db.Model(&models.Robots{}).Where("id = ?", robotID).Count(&count).Error
 	if err != nil {

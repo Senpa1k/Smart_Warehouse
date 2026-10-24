@@ -2,6 +2,7 @@
 Точка входа главного приложения, запускающая REST api сервис
 */
 
+// Package main starts the Smart Warehouse HTTP API.
 package main
 
 import (
@@ -35,7 +36,11 @@ func main() {
 		redisClient = nil
 	} else {
 		logrus.Info("Redis connected successfully")
-		defer redisClient.Close()
+		defer func() {
+			if closeErr := redisClient.Close(); closeErr != nil {
+				logrus.WithError(closeErr).Warn("close Redis client")
+			}
+		}()
 	}
 
 	// сервис разделё на 3 слоя
@@ -47,8 +52,8 @@ func main() {
 
 	srv := new(server.Server)
 	go func() { // инициализируем сервер
-		if err := srv.Run("3000", handler.InitRoutes()); err != nil {
-			logrus.Fatalf("error in init http server: %s", err.Error())
+		if runErr := srv.Run("3000", handler.InitRoutes()); runErr != nil {
+			logrus.Fatalf("error in init http server: %s", runErr.Error())
 		}
 		done <- struct{}{}
 	}()
@@ -57,12 +62,15 @@ func main() {
 	<-done
 	logrus.Print("Server down")
 
-	if err := srv.Shutdown(context.Background()); err != nil {
-		logrus.Fatalf("error with shutting down %s", err.Error())
+	if shutdownErr := srv.Shutdown(context.Background()); shutdownErr != nil {
+		logrus.Fatalf("error with shutting down %s", shutdownErr.Error())
 	}
 
 	closer, err := db.DB()
-	if err2 := closer.Close(); err != nil || err2 != nil {
-		logrus.Fatalf("error with clossing db %s", err.Error())
+	if err != nil {
+		logrus.Fatalf("access database connection: %v", err)
+	}
+	if err := closer.Close(); err != nil {
+		logrus.Fatalf("close database connection: %v", err)
 	}
 }

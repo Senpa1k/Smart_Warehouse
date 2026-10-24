@@ -74,7 +74,7 @@ func TestUserIdentityMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			req, _ := http.NewRequest("GET", "/protected", nil)
+			req := httptest.NewRequestWithContext(t.Context(), "GET", "/protected", nil)
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
 			} else if tt.name == "valid token in query" {
@@ -105,9 +105,9 @@ func TestRobotIdentityMiddleware(t *testing.T) {
 	})
 
 	t.Run("valid robot authorization", func(t *testing.T) {
-		mocks.Robot.On("CheckId", "test-robot").Return(true)
+		mocks.Robot.On("CheckID", "test-robot").Return(true)
 
-		req, _ := http.NewRequest("POST", "/robot-data", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "POST", "/robot-data", nil)
 		req.Header.Set("Authorization", "Bearer Robot_test-robot")
 
 		w := httptest.NewRecorder()
@@ -116,11 +116,32 @@ func TestRobotIdentityMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
-	t.Run("invalid robot id", func(t *testing.T) {
-		mocks.Robot.On("CheckId", "invalid-robot").Return(false)
+	t.Run("emulator robot authorization", func(t *testing.T) {
+		mocks.Robot.On("CheckID", "RB-001").Return(true)
 
-		req, _ := http.NewRequest("POST", "/robot-data", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/robot-data", nil)
+		req.Header.Set("Authorization", "Bearer token_RB-001")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("invalid robot id", func(t *testing.T) {
+		mocks.Robot.On("CheckID", "invalid-robot").Return(false)
+
+		req := httptest.NewRequestWithContext(t.Context(), "POST", "/robot-data", nil)
 		req.Header.Set("Authorization", "Robot_invalid-robot")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("malformed robot authorization", func(t *testing.T) {
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/robot-data", nil)
+		req.Header.Set("Authorization", "Bearer malformed")
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -140,9 +161,9 @@ func TestRateLimitMiddleware(t *testing.T) {
 	})
 
 	t.Run("within rate limit", func(t *testing.T) {
-		mocks.Redis.On("CheckRateLimit", mock.Anything, 100, mock.Anything).Return(true, nil)
+		mocks.Redis.On("CheckRateLimit", mock.Anything, 100, mock.Anything).Return(true, nil).Once()
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/test", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -150,9 +171,9 @@ func TestRateLimitMiddleware(t *testing.T) {
 	})
 
 	t.Run("exceeds rate limit", func(t *testing.T) {
-		mocks.Redis.On("CheckRateLimit", mock.Anything, 100, mock.Anything).Return(false, nil)
+		mocks.Redis.On("CheckRateLimit", mock.Anything, 100, mock.Anything).Return(false, nil).Once()
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/test", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -162,7 +183,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 	t.Run("redis error", func(t *testing.T) {
 		mocks.Redis.On("CheckRateLimit", mock.Anything, 100, mock.Anything).Return(false, errors.New("redis error"))
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/test", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 

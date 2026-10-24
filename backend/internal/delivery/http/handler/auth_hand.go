@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// SignUp registers a user after validating the supplied password.
 func (h *Handler) SignUp(c *gin.Context) { // not task
 	var input models.Users
 
@@ -22,18 +23,19 @@ func (h *Handler) SignUp(c *gin.Context) { // not task
 		return
 	}
 
-	id, err := h.services.Authorization.CreateUser(input)
+	id, err := h.services.CreateUser(input)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	logrus.Print("sign-up successfuly")
-	c.JSON(http.StatusOK, map[string]interface{}{
+	logrus.Print("sign-up successfully")
+	c.JSON(http.StatusOK, map[string]any{
 		"id": id,
 	})
 }
 
+// Login authenticates a user and returns an access token.
 func (h *Handler) Login(c *gin.Context) {
 	var input models.Users
 
@@ -42,24 +44,24 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, in, err := h.services.Authorization.GetUser(input.Email, input.PasswordHash)
+	token, in, err := h.services.GetUser(input.Email, input.PasswordHash)
 	if err != nil {
 		NewResponseError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if in.ID == 0 {
-		c.JSON(http.StatusUnauthorized, map[string]interface{}{
+		c.JSON(http.StatusUnauthorized, map[string]any{
 			"error":   "invalid date",
 			"message": "неверный email или пароль",
 		})
 		return
 	}
 
-	logrus.Print("sign-up successfuly")
-	c.JSON(http.StatusOK, map[string]interface{}{
+	logrus.Print("sign-up successfully")
+	c.JSON(http.StatusOK, map[string]any{
 		"token": token,
-		"user": map[string]interface{}{
+		"user": map[string]any{
 			"id":   in.ID,
 			"name": in.Name,
 			"role": in.Role,

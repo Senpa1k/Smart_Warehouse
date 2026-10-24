@@ -8,14 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Handler groups HTTP endpoints and their business services.
 type Handler struct {
 	services *service.Service
 }
 
+// NewHandler constructs an HTTP handler from the service set.
 func NewHandler(services *service.Service) *Handler {
 	return &Handler{services: services}
 }
 
+// InitRoutes registers the warehouse API routes and middleware.
 func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.New()
 

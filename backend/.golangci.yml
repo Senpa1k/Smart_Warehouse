@@ -1,0 +1,58 @@
+# Правила статического анализа backend, основанные на конфигурации AvitoLab.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - asciicheck
+    - bodyclose
+    - errorlint
+    - exhaustive
+    - gocritic
+    - gosec
+    - misspell
+    - modernize
+    - nilerr
+    - noctx
+    - revive
+    - unconvert
+    - usetesting
+    - wastedassign
+    - whitespace
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+  exclusions:
+    rules:
+      - linters:
+          - gosec
+        text: "G404"
+      # В тестах пароль специально сериализуется в тело запроса авторизации.
+      - path: internal/delivery/http/handler_test/
+        linters:
+          - gosec
+        text: "G117"
+      # Хеш существующих пользователей сохранён ради совместимости с БД.
+      - path: internal/service/services/auth_service.go
+        linters:
+          - gosec
+        text: "G401|G505"
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra:
+        group-params: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

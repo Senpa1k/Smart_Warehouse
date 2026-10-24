@@ -34,7 +34,7 @@ func TestSignUp(t *testing.T) {
 				Name:         "Test User",
 			},
 			mockSetup: func() {
-				mocks.Authorization.On("CreateUser", mock.AnythingOfType("models.Users")).Return(1, nil)
+				mocks.Authorization.On("CreateUser", mock.AnythingOfType("models.Users")).Return(1, nil).Once()
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -65,7 +65,7 @@ func TestSignUp(t *testing.T) {
 			tt.mockSetup()
 
 			body, _ := json.Marshal(tt.requestBody)
-			req, _ := http.NewRequest("POST", "/signup", bytes.NewBuffer(body))
+			req := httptest.NewRequestWithContext(t.Context(), "POST", "/signup", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
@@ -94,10 +94,10 @@ func TestLogin(t *testing.T) {
 			Role: "user",
 		}
 
-		mocks.Authorization.On("GetUser", userInput.Email, userInput.PasswordHash).Return("jwt-token", userResponse, nil)
+		mocks.Authorization.On("GetUser", userInput.Email, userInput.PasswordHash).Return("jwt-token", userResponse, nil).Once()
 
 		body, _ := json.Marshal(userInput)
-		req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), "POST", "/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
@@ -105,11 +105,11 @@ func TestLogin(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var resp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		var resp map[string]any
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "jwt-token", resp["token"])
 
-		userData := resp["user"].(map[string]interface{})
+		userData := resp["user"].(map[string]any)
 		assert.Equal(t, float64(1), userData["id"])
 		assert.Equal(t, "Test User", userData["name"])
 		assert.Equal(t, "user", userData["role"])
@@ -125,7 +125,7 @@ func TestLogin(t *testing.T) {
 		mocks.Authorization.On("GetUser", userInput.Email, userInput.PasswordHash).Return("", emptyUser, nil)
 
 		body, _ := json.Marshal(userInput)
-		req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), "POST", "/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
@@ -143,7 +143,7 @@ func TestLogin(t *testing.T) {
 		mocks.Authorization.On("GetUser", userInput.Email, userInput.PasswordHash).Return("", models.Users{}, errors.New("database error"))
 
 		body, _ := json.Marshal(userInput)
-		req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), "POST", "/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()

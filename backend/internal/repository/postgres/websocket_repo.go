@@ -9,15 +9,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// WebsocketDashBoardPostgres builds dashboard alerts from persisted inventory data.
 type WebsocketDashBoardPostgres struct {
 	db *gorm.DB
 }
 
+// NewWebsocketDashBoardPostgres constructs the PostgreSQL alert repository.
 func NewWebsocketDashBoardPostgres(db *gorm.DB) *WebsocketDashBoardPostgres {
 	return &WebsocketDashBoardPostgres{db: db}
 }
 
-// создание оповещений на основе данных инвентаризации
+// InventoryAlertScanned fills an alert for a non-OK product scan.
 func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.InventoryAlert, timestemp time.Time, idProduct string) error {
 	var inventoryHistory models.InventoryHistory
 
@@ -36,7 +38,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.Invent
 
 	// формирование оповещения
 	enti.Type = "inventory_alert"
-	enti.Data.ProductId = inventoryHistory.ProductID
+	enti.Data.ProductID = inventoryHistory.ProductID
 	enti.Data.ProductName = product
 	enti.Data.CurrentQuantity = inventoryHistory.Quantity
 	enti.Data.Zone = inventoryHistory.Zone
@@ -50,8 +52,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertScanned(enti *entities.Invent
 	return nil
 }
 
-
-// создание оповещений на основе предективной аналитики
+// InventoryAlertPredict fills an alert for a predicted shortage.
 func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.InventoryAlert, predict entities.Predictions) error {
 	// получение информации о продукте
 	var product models.Products
@@ -66,7 +67,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 	}
 
 	alertType := "predicted"
-	message := ""
+	var message string
 
 	// определение статуса прогноза
 	switch {
@@ -87,7 +88,7 @@ func (w *WebsocketDashBoardPostgres) InventoryAlertPredict(enti *entities.Invent
 
 	// формирование оповещения
 	enti.Type = "inventory_alert"
-	enti.Data.ProductId = predict.ProductID
+	enti.Data.ProductID = predict.ProductID
 	enti.Data.ProductName = product.Name
 	enti.Data.CurrentQuantity = currentQuantity
 	enti.Data.Zone = ""

@@ -1,3 +1,4 @@
+// Package repository defines persistence contracts and Redis operations.
 package repository
 
 import (
@@ -9,11 +10,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// RedisClient wraps Redis caching, pub/sub, robot state, and rate limiting.
 type RedisClient struct {
 	client *redis.Client
 	ctx    context.Context
 }
 
+// NewRedisClient connects to Redis using a URL and verifies the connection.
 func NewRedisClient(redisURL string) (*RedisClient, error) {
 	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
@@ -34,38 +37,44 @@ func NewRedisClient(redisURL string) (*RedisClient, error) {
 	}, nil
 }
 
-func (r *RedisClient) Set(key string, value interface{}, expiration time.Duration) error {
+// Set stores a value with an expiration time.
+func (r *RedisClient) Set(key string, value any, expiration time.Duration) error {
 	return r.client.Set(r.ctx, key, value, expiration).Err()
 }
 
+// Get reads a cached string value.
 func (r *RedisClient) Get(key string) (string, error) {
 	return r.client.Get(r.ctx, key).Result()
 }
 
+// Delete removes a cached key.
 func (r *RedisClient) Delete(key string) error {
 	return r.client.Del(r.ctx, key).Err()
 }
 
+// Exists reports whether a cached key is present.
 func (r *RedisClient) Exists(key string) (bool, error) {
 	result, err := r.client.Exists(r.ctx, key).Result()
 	return result > 0, err
 }
 
+// Close closes the underlying Redis connection.
 func (r *RedisClient) Close() error {
 	return r.client.Close()
 }
 
-// Дополнительные методы для будущего использования
-func (r *RedisClient) HSet(key string, values ...interface{}) error {
+// HSet writes fields into a Redis hash.
+func (r *RedisClient) HSet(key string, values ...any) error {
 	return r.client.HSet(r.ctx, key, values...).Err()
 }
 
+// HGet reads a field from a Redis hash.
 func (r *RedisClient) HGet(key, field string) (string, error) {
 	return r.client.HGet(r.ctx, key, field).Result()
 }
 
 // Publish - отправка сообщения в Redis channel
-func (r *RedisClient) Publish(channel string, message interface{}) error {
+func (r *RedisClient) Publish(channel string, message any) error {
 	return r.client.Publish(r.ctx, channel, message).Err()
 }
 
@@ -74,22 +83,25 @@ func (r *RedisClient) Subscribe(channel string) *redis.PubSub {
 	return r.client.Subscribe(r.ctx, channel)
 }
 
-// Robot status management
+// SetRobotStatus caches a robot status for the given duration.
 func (r *RedisClient) SetRobotStatus(robotID, status string, expiration time.Duration) error {
 	key := fmt.Sprintf("robot:%s:status", robotID)
 	return r.Set(key, status, expiration)
 }
 
+// GetRobotStatus reads the cached status of a robot.
 func (r *RedisClient) GetRobotStatus(robotID string) (string, error) {
 	key := fmt.Sprintf("robot:%s:status", robotID)
 	return r.Get(key)
 }
 
+// SetRobotBattery caches a robot battery level for the given duration.
 func (r *RedisClient) SetRobotBattery(robotID string, batteryLevel int, expiration time.Duration) error {
 	key := fmt.Sprintf("robot:%s:battery", robotID)
 	return r.Set(key, strconv.Itoa(batteryLevel), expiration)
 }
 
+// GetRobotBattery reads the cached battery level of a robot.
 func (r *RedisClient) GetRobotBattery(robotID string) (int, error) {
 	key := fmt.Sprintf("robot:%s:battery", robotID)
 	val, err := r.Get(key)
@@ -99,39 +111,28 @@ func (r *RedisClient) GetRobotBattery(robotID string) (int, error) {
 	return strconv.Atoi(val)
 }
 
-// Online robots tracking
+// SetRobotOnline records the latest time a robot was seen.
 func (r *RedisClient) SetRobotOnline(robotID string) error {
 	key := fmt.Sprintf("robot:%s:last_seen", robotID)
 	return r.Set(key, time.Now().Format(time.RFC3339), 30*time.Second)
 }
 
+// IsRobotOnline reports whether a robot was seen recently.
 func (r *RedisClient) IsRobotOnline(robotID string) (bool, error) {
 	key := fmt.Sprintf("robot:%s:last_seen", robotID)
 	return r.Exists(key)
 }
 
-// Rate limiting - защита от слишком частых запросов
+// CheckRateLimit increments a request counter and checks its window limit.
 func (r *RedisClient) CheckRateLimit(key string, limit int, window time.Duration) (bool, error) {
-	// Получаем текущее значение
-	current, err := r.Get(key)
+	count, err := r.client.Incr(r.ctx, key).Result()
 	if err != nil {
-		// Первый запрос - устанавливаем счетчик
-		r.Set(key, "1", window)
-		return true, nil
+		return false, fmt.Errorf("increment rate limit counter: %w", err)
 	}
-
-	// Преобразуем в число
-	count, err := strconv.Atoi(current)
-	if err != nil {
-		return false, err
+	if count == 1 {
+		if err := r.client.Expire(r.ctx, key, window).Err(); err != nil {
+			return false, fmt.Errorf("expire rate limit counter: %w", err)
+		}
 	}
-
-	// Проверяем лимит
-	if count >= limit {
-		return false, nil // Лимит исчерпан
-	}
-
-	// Увеличиваем счетчик
-	r.Set(key, strconv.Itoa(count+1), window)
-	return true, nil
+	return count <= int64(limit), nil
 }

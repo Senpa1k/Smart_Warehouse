@@ -10,16 +10,19 @@ import (
 	"gorm.io/gorm"
 )
 
+// Authorization defines persistence operations for user accounts.
 type Authorization interface {
 	CreateUser(models.Users) (uint, error)
 	GetUser(string, string) (*models.Users, error)
 }
 
+// WebsocketDashBoard loads inventory alerts for dashboard streams.
 type WebsocketDashBoard interface {
 	InventoryAlertScanned(*entities.InventoryAlert, time.Time, string) error
 	InventoryAlertPredict(*entities.InventoryAlert, entities.Predictions) error
 }
 
+// Inventory defines inventory persistence and history queries.
 type Inventory interface {
 	ImportInventoryHistories(histories []models.InventoryHistory) error
 	GetInventoryHistoryByProductIDs(productIDs []string) ([]models.InventoryHistory, error)
@@ -30,15 +33,18 @@ type Inventory interface {
 	GetHistory(from, to, zone, status string, limit, offset int) ([]models.InventoryHistory, int64, error)
 }
 
+// DashBoard loads data for the current dashboard snapshot.
 type DashBoard interface {
 	GetDashInfo(*entities.DashInfo) error
 }
 
+// Robot stores robot scans and checks registered IDs.
 type Robot interface {
 	AddData(entities.RobotsData) error
-	CheckId(string) bool
+	CheckID(string) bool
 }
 
+// AI loads AI inputs and stores generated forecasts.
 type AI interface {
 	AIRequest(entities.AIRequest) ([]models.InventoryHistory, error)
 	AIResponse(entities.AIResponse) error
@@ -46,11 +52,11 @@ type AI interface {
 
 // Redis интерфейс
 type Redis interface {
-	Set(key string, value interface{}, expiration time.Duration) error
+	Set(key string, value any, expiration time.Duration) error
 	Get(key string) (string, error)
 	Delete(key string) error
 	Exists(key string) (bool, error)
-	Publish(channel string, message interface{}) error
+	Publish(channel string, message any) error
 	Subscribe(channel string) *redis.PubSub
 
 	SetRobotStatus(robotID, status string, expiration time.Duration) error
@@ -63,6 +69,7 @@ type Redis interface {
 	CheckRateLimit(key string, limit int, window time.Duration) (bool, error)
 }
 
+// Repository groups the persistence interfaces used by services.
 type Repository struct {
 	Robot
 	Inventory
@@ -73,6 +80,7 @@ type Repository struct {
 	Redis Redis
 }
 
+// NewRepository wires PostgreSQL repositories and an optional Redis client.
 func NewRepository(db *gorm.DB, redisClient Redis) *Repository {
 	return &Repository{
 		Authorization:      postgres.NewAuthPostgres(db),
@@ -85,7 +93,7 @@ func NewRepository(db *gorm.DB, redisClient Redis) *Repository {
 	}
 }
 
-// метод для безопасной работы с Redis
+// WithRedis runs fn when a Redis client is configured.
 func (r *Repository) WithRedis(fn func(redis Redis) error) error {
 	if r.Redis == nil {
 		return nil

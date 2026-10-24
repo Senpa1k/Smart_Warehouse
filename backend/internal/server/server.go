@@ -1,3 +1,4 @@
+// Package server runs and shuts down the warehouse HTTP server.
 package server
 
 import (
@@ -6,10 +7,12 @@ import (
 	"time"
 )
 
+// Server owns the HTTP server and its shutdown lifecycle.
 type Server struct {
 	httpServer *http.Server
 }
 
+// Run starts serving HTTP requests on the given port.
 func (s *Server) Run(port string, handler http.Handler) error {
 	s.httpServer = &http.Server{
 		Addr:           ":" + port,
@@ -22,6 +25,7 @@ func (s *Server) Run(port string, handler http.Handler) error {
 	return s.httpServer.ListenAndServe()
 }
 
+// Shutdown gracefully stops the running HTTP server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.httpServer.Shutdown(ctx)
 }

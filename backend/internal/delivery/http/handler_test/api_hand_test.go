@@ -1,3 +1,4 @@
+// Package test_handler verifies HTTP behavior through service mocks.
 package test_handler
 
 import (
@@ -50,14 +51,14 @@ func TestRobotsEndpoint(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		requestBody    interface{}
+		requestBody    any
 		mockSetup      func()
 		expectedStatus int
 	}{
 		{
 			name: "successful data submission",
 			requestBody: entities.RobotsData{
-				RobotId:   "test-robot",
+				RobotID:   "test-robot",
 				Timestamp: time.Now(),
 				Location: struct {
 					Zone  string `json:"zone" binding:"required"`
@@ -70,7 +71,7 @@ func TestRobotsEndpoint(t *testing.T) {
 				},
 				ScanResults: []entities.ScanResults{
 					{
-						ProductId:   "prod1",
+						ProductID:   "prod1",
 						ProductName: "Product 1",
 						Quantity:    10,
 						Status:      "ok",
@@ -80,13 +81,13 @@ func TestRobotsEndpoint(t *testing.T) {
 				NextCheckpoint: "checkpoint1",
 			},
 			mockSetup: func() {
-				mocks.Robot.On("AddData", mock.AnythingOfType("entities.RobotsData")).Return(nil)
+				mocks.Robot.On("AddData", mock.AnythingOfType("entities.RobotsData")).Return(nil).Once()
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name: "invalid data format",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"invalid": "data",
 			},
 			mockSetup:      func() {},
@@ -95,7 +96,7 @@ func TestRobotsEndpoint(t *testing.T) {
 		{
 			name: "service error",
 			requestBody: entities.RobotsData{
-				RobotId:   "test-robot",
+				RobotID:   "test-robot",
 				Timestamp: time.Now(),
 				Location: struct {
 					Zone  string `json:"zone" binding:"required"`
@@ -122,7 +123,7 @@ func TestRobotsEndpoint(t *testing.T) {
 			tt.mockSetup()
 
 			body, _ := json.Marshal(tt.requestBody)
-			req, _ := http.NewRequest("POST", "/robots", bytes.NewBuffer(body))
+			req := httptest.NewRequestWithContext(t.Context(), "POST", "/robots", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
@@ -145,21 +146,21 @@ func TestGetDashInfo(t *testing.T) {
 	})
 
 	t.Run("successful dashboard info", func(t *testing.T) {
-		mocks.DashBoard.On("GetDashInfo", mock.AnythingOfType("*entities.DashInfo")).Return(nil).Run(func(args mock.Arguments) {
+		mocks.DashBoard.On("GetDashInfo", mock.AnythingOfType("*entities.DashInfo")).Return(nil).Once().Run(func(args mock.Arguments) {
 			dash := args.Get(0).(*entities.DashInfo)
 			dash.Statistics.TotalRobots = 5
 			dash.Statistics.ActiveRobots = 3
 			dash.Statistics.AvgBattery = 85
 		})
 
-		req, _ := http.NewRequest("GET", "/dashboard", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/dashboard", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response entities.DashInfo
-		json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 		assert.Equal(t, 5, response.Statistics.TotalRobots)
 		assert.Equal(t, 3, response.Statistics.ActiveRobots)
 	})
@@ -167,7 +168,7 @@ func TestGetDashInfo(t *testing.T) {
 	t.Run("dashboard service error", func(t *testing.T) {
 		mocks.DashBoard.On("GetDashInfo", mock.AnythingOfType("*entities.DashInfo")).Return(errors.New("service error"))
 
-		req, _ := http.NewRequest("GET", "/dashboard", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/dashboard", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -206,7 +207,7 @@ func TestAIRequest(t *testing.T) {
 		mocks.AI.On("Predict", request).Return(response, nil)
 
 		body, _ := json.Marshal(request)
-		req, _ := http.NewRequest("POST", "/ai-predict", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), "POST", "/ai-predict", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
@@ -214,8 +215,8 @@ func TestAIRequest(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var resp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		var resp map[string]any
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.NotNil(t, resp["predictions"])
 		assert.NotNil(t, resp["confidence"])
 	})
@@ -237,7 +238,7 @@ func TestExportExcel(t *testing.T) {
 
 		mocks.Inventory.On("ExportExcel", productIDs).Return(excelData, nil)
 
-		req, _ := http.NewRequest("GET", "/export?ids=1,2,3", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/export?ids=1,2,3", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -248,7 +249,7 @@ func TestExportExcel(t *testing.T) {
 	})
 
 	t.Run("missing ids parameter", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/export", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/export", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -271,14 +272,14 @@ func TestGetRobotsStatus(t *testing.T) {
 			mocks.Redis.On("GetRobotStatus", robotID).Return("working", nil)
 		}
 
-		req, _ := http.NewRequest("GET", "/robots-status", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/robots-status", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var resp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		var resp map[string]any
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, float64(5), resp["online_robots"])
 		assert.Equal(t, float64(5), resp["total_robots"])
 		assert.Equal(t, float64(85), resp["avg_battery"])
@@ -293,14 +294,14 @@ func TestGetRobotsStatus(t *testing.T) {
 
 		router.GET("/robots-status-no-redis", hNoRedis.GetRobotsStatus)
 
-		req, _ := http.NewRequest("GET", "/robots-status-no-redis", nil)
+		req := httptest.NewRequestWithContext(t.Context(), "GET", "/robots-status-no-redis", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var resp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		var resp map[string]any
+		assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "Redis не доступен, статусы в реальном времени недоступны", resp["message"])
 	})
 }

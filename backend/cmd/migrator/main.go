@@ -2,9 +2,11 @@
 Код для принятия миграций из migrates. Запускается автоматически при сборке контейнера backend
 */
 
+// Package main applies warehouse database migrations.
 package main
 
 import (
+	"errors"
 	"log"
 
 	"github.com/Senpa1k/Smart_Warehouse/internal/repository"
@@ -35,7 +37,7 @@ func runMigrate(db *gorm.DB) {
 	}
 
 	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatal(err)
 	}
 

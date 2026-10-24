@@ -1,13 +1,12 @@
+// Package services implements warehouse business operations.
 package services
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/tls"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -18,31 +17,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// AIService generates and caches warehouse inventory forecasts.
 type AIService struct {
-	repo       repository.AI
-	redis      repository.Redis
-	made       chan<- interface{}
-	httpClient *http.Client
+	repo  repository.AI
+	redis repository.Redis
+	made  chan<- any
 }
 
-func NewAIService(repo repository.AI, made chan<- interface{}, redis repository.Redis) *AIService {
-	// Создаем HTTP клиент с таймаутами и пропуском проверки SSL (аналогично WithCustomInsecureSkipVerify)
-	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
+// NewAIService constructs the forecast service with its repository and event channel.
+func NewAIService(repo repository.AI, made chan<- any, redis repository.Redis) *AIService {
 	return &AIService{
-		repo:       repo,
-		redis:      redis,
-		made:       made,
-		httpClient: httpClient,
+		repo:  repo,
+		redis: redis,
+		made:  made,
 	}
 }
 
-// Структуры для GigaChat API
+// GigaChatRequest is the JSON request body accepted by GigaChat.
 type GigaChatRequest struct {
 	Model       string            `json:"model"`
 	Messages    []GigaChatMessage `json:"messages"`
@@ -51,11 +42,13 @@ type GigaChatRequest struct {
 	MaxTokens   int               `json:"max_tokens,omitempty"`
 }
 
+// GigaChatMessage contains one role-tagged GigaChat message.
 type GigaChatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
+// GigaChatResponse contains the message choices returned by GigaChat.
 type GigaChatResponse struct {
 	Choices []struct {
 		Message struct {
@@ -64,6 +57,7 @@ type GigaChatResponse struct {
 	} `json:"choices"`
 }
 
+// Predict returns cached forecasts or generates and persists new ones.
 func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error) {
 	// 1. Создаем ключ кеша на основе входных параметров
 	cacheKey := fmt.Sprintf("ai:predict:%s:%d", generateRequestHash(rq), rq.PeriodDays)
@@ -88,7 +82,7 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 
 	// creating a client for communication with AI
 	ctx := context.Background()
-	client, err := gigago.NewClient(ctx, apikey, gigago.WithCustomInsecureSkipVerify(true))
+	client, err := gigago.NewClient(ctx, apikey)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +110,9 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 
 	// prompt for getting a forecast
 	messages := []gigago.Message{
-		{Role: gigago.RoleUser, Content: `Анализ складских запасов - прогноз на ` + strconv.Itoa(rq.PeriodDays) + ` дней. ДАННЫЕ ДЛЯ АНАЛИЗА:` + string(assistantRequest) +
-			`
+		{
+			Role: gigago.RoleUser, Content: `Анализ складских запасов - прогноз на ` + strconv.Itoa(rq.PeriodDays) + ` дней. ДАННЫЕ ДЛЯ АНАЛИЗА:` + string(assistantRequest) +
+				`
 
 			ЗАДАЧА:
 			Проанализируй тенденции потребления для каждого товара и спрогнозируй:
@@ -169,9 +164,13 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 
 	// 4. Сохраняем результат в кеш на 1 час
 	if ai.redis != nil {
-		data, _ := json.Marshal(aiResponse)
-		ai.redis.Set(cacheKey, data, time.Hour)
-		logrus.Infof("AI prediction cached for key: %s", cacheKey)
+		data, err := json.Marshal(aiResponse)
+		if err != nil {
+			return nil, fmt.Errorf("marshal AI response: %w", err)
+		}
+		if err := ai.redis.Set(cacheKey, data, time.Hour); err != nil {
+			logrus.WithError(err).Warn("AI cache write failed")
+		}
 	}
 
 	ai.made <- aiResponse
@@ -182,5 +181,5 @@ func (ai *AIService) Predict(rq entities.AIRequest) (*entities.AIResponse, error
 // Вспомогательная функция для создания хеша запроса
 func generateRequestHash(rq entities.AIRequest) string {
 	data := fmt.Sprintf("%v", rq)
-	return fmt.Sprintf("%x", md5.Sum([]byte(data)))
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(data)))
 }

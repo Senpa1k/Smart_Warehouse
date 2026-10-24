@@ -1,3 +1,4 @@
+// Package postgres implements warehouse persistence with GORM.
 package postgres
 
 import (
@@ -8,15 +9,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// AIPostgres reads forecast inputs and persists predictions in PostgreSQL.
 type AIPostgres struct {
 	db *gorm.DB
 }
 
+// NewAIPostgres constructs the PostgreSQL prediction repository.
 func NewAIPostgres(db *gorm.DB) *AIPostgres {
 	return &AIPostgres{db: db}
 }
 
-// getting the necessary data to send a request to the AI
+// AIRequest loads recent inventory scans for the requested categories.
 func (ai *AIPostgres) AIRequest(rq entities.AIRequest) ([]models.InventoryHistory, error) {
 	var products []models.InventoryHistory
 
@@ -40,8 +43,8 @@ func (ai *AIPostgres) AIRequest(rq entities.AIRequest) ([]models.InventoryHistor
 						inventory_history.quantity,
 						inventory_history.status,
 						inventory_history.scanned_at`).
-					Preload("Product").Joins("JOIN products ON inventory_history.product_id = products.id").
-					Joins("JOIN (?) as time_slots ON inventory_history.product_id = time_slots.product_id AND inventory_history.scanned_at = time_slots.latest_in_slot", subQuery)
+		Preload("Product").Joins("JOIN products ON inventory_history.product_id = products.id").
+		Joins("JOIN (?) as time_slots ON inventory_history.product_id = time_slots.product_id AND inventory_history.scanned_at = time_slots.latest_in_slot", subQuery)
 	if len(rq.Categories) > 0 {
 		query = query.Where("products.category IN ? ", rq.Categories)
 	}
@@ -51,22 +54,21 @@ func (ai *AIPostgres) AIRequest(rq entities.AIRequest) ([]models.InventoryHistor
 		return nil, err
 	}
 
-
 	return products, nil
 }
 
-// recording the response from the AI in the database
+// AIResponse persists the product forecasts returned by the AI service.
 func (ai *AIPostgres) AIResponse(rp entities.AIResponse) error {
 	for _, elem := range rp.Predictions {
 		predictionDate, err := time.Parse("2006-01-02", elem.PredictionDate)
+		if err != nil {
+			predictionDate, err = time.Parse("02.01.2006", elem.PredictionDate)
 			if err != nil {
-				predictionDate, err = time.Parse("02.01.2006", elem.PredictionDate)
-				if err != nil {
-					return err
-				}
+				return err
 			}
+		}
 
-		var prediction models.AiPrediction = models.AiPrediction{
+		prediction := models.AiPrediction{
 			ProductID:         elem.ProductID,
 			PredictionDate:    predictionDate,
 			DaysUntilStockout: elem.DaysUntilStockout,

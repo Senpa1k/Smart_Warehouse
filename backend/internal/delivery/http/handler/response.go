@@ -9,7 +9,7 @@ type errorResponse struct {
 	Massage string `json:"message"`
 }
 
-// response с ошибкой
+// NewResponseError writes an error message and aborts the HTTP request.
 func NewResponseError(c *gin.Context, statusCode int, message string) {
 	logrus.Error(message)
 	c.AbortWithStatusJSON(statusCode, errorResponse{message})

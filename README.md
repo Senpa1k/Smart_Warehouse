@@ -254,10 +254,21 @@ cd backend
 go mod download
 go run cmd/app/main.go
 ```
+
+### Проверка Backend
+Команды выполняются из каталога `backend`. Для `make test` нужен CGO. Линтер `golangci-lint` v2.14.0 требует Go 1.26+; `make install` установит его в стандартный каталог Go (`GOBIN` или `GOPATH/bin`).
+
+```bash
+cd backend
+make install   # зависимости и закреплённая версия golangci-lint
+make format    # gofumpt и goimports
+make lint      # tidy, конфигурация, форматирование и статический анализ
+make test      # тесты с race detector и отчётом покрытия
+make build
+```
 ### Локальный запуск Frontend
 ```bash
 cd frontend
 npm install
 npm run dev  # http://localhost:3001
 ```
-

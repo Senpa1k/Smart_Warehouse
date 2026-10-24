@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -16,15 +17,15 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-const (
-	robotIdForImport = "IMPORT_SERVICE"
-)
+const robotIDForImport = "IMPORT_SERVICE"
 
+// InventoryService imports, exports, and queries inventory scans.
 type InventoryService struct {
 	repo  repository.Inventory
 	redis repository.Redis
 }
 
+// NewInventoryService constructs the inventory service with optional caching.
 func NewInventoryService(repo repository.Inventory, redis repository.Redis) *InventoryService {
 	return &InventoryService{
 		repo:  repo,
@@ -32,7 +33,7 @@ func NewInventoryService(repo repository.Inventory, redis repository.Redis) *Inv
 	}
 }
 
-// импорт csv файла в приложение
+// ImportCSV validates semicolon-separated scans and persists valid rows.
 func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult, error) {
 	// настройка конфигурации CSV ридера
 	reader := csv.NewReader(csvData)
@@ -40,7 +41,7 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 	reader.FieldsPerRecord = -1
 
 	var histories []models.InventoryHistory
-	var errors []string
+	var recordErrors []string
 	successCount := 0
 	failedCount := 0
 
@@ -52,19 +53,19 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 	// обработка записей из файла
 	for {
 		record, err := reader.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
 			failedCount++
-			errors = append(errors, fmt.Sprintf("CSV read error: %v", err))
+			recordErrors = append(recordErrors, fmt.Sprintf("CSV read error: %v", err))
 			continue
 		}
 
 		// проверка количества полей
 		if len(record) < 7 {
 			failedCount++
-			errors = append(errors, "Insufficient fields in record")
+			recordErrors = append(recordErrors, "Insufficient fields in record")
 			continue
 		}
 
@@ -75,14 +76,14 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 
 		if err1 != nil || err2 != nil || err3 != nil {
 			failedCount++
-			errors = append(errors, fmt.Sprintf("Invalid numeric values for product %s", record[0]))
+			recordErrors = append(recordErrors, fmt.Sprintf("Invalid numeric values for product %s", record[0]))
 			continue
 		}
 
 		scannedAt, err := time.Parse("2006-01-02", strings.TrimSpace(record[4]))
 		if err != nil {
 			failedCount++
-			errors = append(errors, fmt.Sprintf("Invalid date format for product %s: %v", record[0], err))
+			recordErrors = append(recordErrors, fmt.Sprintf("Invalid date format for product %s: %v", record[0], err))
 			continue
 		}
 
@@ -90,7 +91,7 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 
 		// формирование модели для бд
 		history := models.InventoryHistory{
-			RobotID:     robotIdForImport,
+			RobotID:     robotIDForImport,
 			ProductID:   productID,
 			Quantity:    quantity,
 			Zone:        strings.TrimSpace(record[3]),
@@ -114,11 +115,11 @@ func (s *InventoryService) ImportCSV(csvData io.Reader) (*entities.ImportResult,
 	return &entities.ImportResult{
 		SuccessCount: successCount,
 		FailedCount:  failedCount,
-		Errors:       errors,
+		Errors:       recordErrors,
 	}, nil
 }
 
-// экспорт данных их приложения в формате Excel таблицы
+// ExportExcel writes selected inventory scans into an Excel workbook.
 func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
 	// получение данных для экспорта
 	histories, err := s.repo.GetInventoryHistoryByScanIDs(scanIDs)
@@ -129,28 +130,39 @@ func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
 	// создание excel файла и настройка его столбцов
 	f := excelize.NewFile()
 	sheetName := "InventoryHistory"
-	f.SetSheetName("Sheet1", sheetName)
+	if sheetErr := f.SetSheetName("Sheet1", sheetName); sheetErr != nil {
+		return nil, fmt.Errorf("set sheet name: %w", sheetErr)
+	}
 
 	headers := []string{"ID", "Robot ID", "Product ID", "Product Name", "Quantity", "Zone", "Row", "Shelf", "Status", "Scanned At", "Created At"}
 	for i, header := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
-		f.SetCellValue(sheetName, cell, header)
+		cell, cellErr := excelize.CoordinatesToCellName(i+1, 1)
+		if cellErr != nil {
+			return nil, fmt.Errorf("header cell: %w", cellErr)
+		}
+		if writeErr := f.SetCellValue(sheetName, cell, header); writeErr != nil {
+			return nil, fmt.Errorf("write header: %w", writeErr)
+		}
 	}
 
 	// заполнение таблицы данными
 	for i, history := range histories {
 		row := i + 2
-		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), history.ID)
-		f.SetCellValue(sheetName, fmt.Sprintf("B%d", row), history.RobotID)
-		f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), history.ProductID)
-		f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), history.Product.Name)
-		f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), history.Quantity)
-		f.SetCellValue(sheetName, fmt.Sprintf("F%d", row), history.Zone)
-		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), history.RowNumber)
-		f.SetCellValue(sheetName, fmt.Sprintf("H%d", row), history.ShelfNumber)
-		f.SetCellValue(sheetName, fmt.Sprintf("I%d", row), history.Status)
-		f.SetCellValue(sheetName, fmt.Sprintf("J%d", row), history.ScannedAt.Format("2006-01-02 15:04:05"))
-		f.SetCellValue(sheetName, fmt.Sprintf("K%d", row), history.CreatedAt.Format("2006-01-02 15:04:05"))
+		values := []any{
+			history.ID, history.RobotID, history.ProductID, history.Product.Name,
+			history.Quantity, history.Zone, history.RowNumber, history.ShelfNumber,
+			history.Status, history.ScannedAt.Format("2006-01-02 15:04:05"),
+			history.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		for column, value := range values {
+			cell, cellErr := excelize.CoordinatesToCellName(column+1, row)
+			if cellErr != nil {
+				return nil, fmt.Errorf("history cell: %w", cellErr)
+			}
+			if writeErr := f.SetCellValue(sheetName, cell, value); writeErr != nil {
+				return nil, fmt.Errorf("write history cell %s: %w", cell, writeErr)
+			}
+		}
 	}
 
 	buffer, err := f.WriteToBuffer()
@@ -160,7 +172,7 @@ func (s *InventoryService) ExportExcel(scanIDs []string) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// получение истории инвентаризации
+// GetHistory returns filtered inventory history and caches the result.
 func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offset int) (*entities.HistoryResponse, error) {
 	// получение данных из бд
 	histories, total, err := s.repo.GetHistory(from, to, zone, status, limit, offset)
@@ -179,9 +191,13 @@ func (s *InventoryService) GetHistory(from, to, zone, status string, limit, offs
 	// 4. Сохраняем в кеш на 30 секунд
 	cacheKey := fmt.Sprintf("history:%s:%s:%s:%s:%d:%d", from, to, zone, status, limit, offset)
 	if s.redis != nil {
-		data, _ := json.Marshal(response)
-		s.redis.Set(cacheKey, data, 30*time.Second)
-		logrus.Infof("History data cached for key: %s", cacheKey)
+		data, err := json.Marshal(response)
+		if err != nil {
+			return nil, fmt.Errorf("marshal history response: %w", err)
+		}
+		if err := s.redis.Set(cacheKey, data, 30*time.Second); err != nil {
+			logrus.WithError(err).Warn("History cache write failed")
+		}
 	}
 
 	return response, nil

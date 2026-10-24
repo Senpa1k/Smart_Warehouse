@@ -1,8 +1,6 @@
 package services
 
 import (
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,16 +10,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// WebsocketDashBoardService streams robot and inventory alerts over WebSocket.
 type WebsocketDashBoardService struct {
 	repo repository.WebsocketDashBoard
-	made <-chan interface{}
+	made <-chan any
 }
 
-func NewWebsocketDashBoard(repo repository.WebsocketDashBoard, made <-chan interface{}) *WebsocketDashBoardService {
+// NewWebsocketDashBoard constructs the dashboard WebSocket service.
+func NewWebsocketDashBoard(repo repository.WebsocketDashBoard, made <-chan any) *WebsocketDashBoardService {
 	return &WebsocketDashBoardService{repo: repo, made: made}
 }
 
-// управление соединением с dashboard
+// RunStream sends queued events and heartbeat pings until disconnect.
 func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 	done := make(chan struct{})
 	var wg sync.WaitGroup
@@ -57,7 +57,10 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 		defer wg.Done()
 		defer close(done)
 		for {
-			conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+			if err := conn.SetWriteDeadline(time.Now().Add(2 * time.Second)); err != nil {
+				logrus.WithError(err).Warn("set WebSocket write deadline")
+				return
+			}
 			err := conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				done <- struct{}{}
@@ -71,11 +74,13 @@ func (r *WebsocketDashBoardService) RunStream(conn *websocket.Conn) {
 	wg.Wait()
 }
 
-// отправка данных о сканировании роботом
+// ScannedRobotSend sends a robot update and any scan alerts.
 func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan entities.RobotsData) error {
 	result := entities.UpdateRobot{}
-	updateRobot(&result, &scan)
-	err := conn.WriteJSON(map[string]interface{}{
+	if err := updateRobot(&result, &scan); err != nil {
+		return err
+	}
+	err := conn.WriteJSON(map[string]any{
 		"type": "robot_update",
 		"data": result,
 	})
@@ -87,8 +92,8 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 	result2 := entities.InventoryAlert{}
 	for _, scanResult := range scan.ScanResults {
 		if scanResult.Status != "OK" {
-			if status := r.repo.InventoryAlertScanned(&result2, scan.Timestamp, scanResult.ProductId); status == nil {
-				err := conn.WriteJSON(map[string]interface{}{
+			if status := r.repo.InventoryAlertScanned(&result2, scan.Timestamp, scanResult.ProductID); status == nil {
+				err := conn.WriteJSON(map[string]any{
 					"type": "inventory_alert",
 					"data": result2,
 				})
@@ -103,19 +108,19 @@ func (r *WebsocketDashBoardService) ScannedRobotSend(conn *websocket.Conn, scan 
 	return nil
 }
 
-// отправка данных о ии прогнозах
+// ScannedAiSend sends alerts for predicted inventory shortages.
 func (r *WebsocketDashBoardService) ScannedAiSend(conn *websocket.Conn, scan entities.AIResponse) error {
 	result := entities.InventoryAlert{}
 
 	// обработка прогноза
 	for _, predict := range scan.Predictions {
 		if err := r.repo.InventoryAlertPredict(&result, predict); err == nil {
-			err_req := conn.WriteJSON(map[string]interface{}{
+			errReq := conn.WriteJSON(map[string]any{
 				"type": "inventory_alert",
 				"data": result,
 			})
-			if err_req != nil {
-				return err_req
+			if errReq != nil {
+				return errReq
 			}
 		} else {
 			logrus.Print(err)
@@ -125,15 +130,17 @@ func (r *WebsocketDashBoardService) ScannedAiSend(conn *websocket.Conn, scan ent
 }
 
 // функция для приведения данных о роботе в удобный для обработки вид
-func updateRobot(ru *entities.UpdateRobot, data *entities.RobotsData) {
-	ru.ID = data.RobotId
+func updateRobot(ru *entities.UpdateRobot, data *entities.RobotsData) error {
+	zone, row, shelf, err := entities.ParseCheckpoint(data.NextCheckpoint)
+	if err != nil {
+		return err
+	}
+	ru.ID = data.RobotID
 	ru.Status = "active"
 	ru.BatteryLevel = data.BatteryLevel
 	ru.LastUpdate = data.Timestamp
-	nextPoint := strings.Split(data.NextCheckpoint, "-")
-	row, _ := strconv.Atoi(nextPoint[1])
-	shelf, _ := strconv.Atoi(nextPoint[2])
-	ru.CurrentZone = nextPoint[0]
+	ru.CurrentZone = zone
 	ru.CurrentRow = row
 	ru.CurrentShelf = shelf
+	return nil
 }

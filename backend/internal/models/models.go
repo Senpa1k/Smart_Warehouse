@@ -1,3 +1,4 @@
+// Package models maps warehouse records to database tables.
 package models
 
 import (
@@ -6,15 +7,17 @@ import (
 
 // структыры таблиц бд для сопоставления с gorm
 
+// Users maps a warehouse user account to the users table.
 type Users struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement;type:serial" json:"id"`
 	Email        string    `gorm:"unique;not null;type:varchar(255)" json:"email" binding:"required"`
 	PasswordHash string    `gorm:"not null;type:varchar(255)" json:"password" binding:"required"`
 	Name         string    `gorm:"not null;type:varchar(255)" json:"name"`
-	Role         string    `gorm:"size:50;not null" json:"role"` //isv_valid   --'operator', 'admin', 'viewer'
+	Role         string    `gorm:"size:50;not null" json:"role"` // isv_valid   --'operator', 'admin', 'viewer'
 	CreatedAt    time.Time `gorm:"type:timestamptz;default:now()" json:"created_at"`
 }
 
+// Products maps a catalog product and its stock thresholds.
 type Products struct {
 	ID           string `gorm:"primaryKey;type:varchar(50)" json:"id"`
 	Name         string `gorm:"type:varchar(255);not null" json:"name"`
@@ -23,6 +26,7 @@ type Products struct {
 	OptimalStock int    `gorm:"default:100" json:"optimal_stock"`
 }
 
+// Robots maps a robot and its most recent location and battery state.
 type Robots struct {
 	ID           string    `gorm:"primaryKey;type:varchar(50)" json:"id"`
 	Status       string    `gorm:"size:50;default:active" json:"status"`
@@ -33,6 +37,7 @@ type Robots struct {
 	CurrentShelf int       `gorm:"type:int" json:"current_shelf"`
 }
 
+// InventoryHistory maps an inventory scan and its related robot and product.
 type InventoryHistory struct {
 	ID          uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	RobotID     string    `gorm:"type:varchar(50);not null" json:"robot_id"`
@@ -50,6 +55,7 @@ type InventoryHistory struct {
 	Product Products `gorm:"foreignKey:ProductID;references:ID" json:"product"`
 }
 
+// AiPrediction maps a stored inventory forecast for a product.
 type AiPrediction struct {
 	ID                uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	ProductID         string    `gorm:"type:varchar(50);not null" json:"-"`
@@ -62,22 +68,27 @@ type AiPrediction struct {
 	AIPredictionProduct Products `gorm:"foreignKey:ProductID;references:ID;" json:"product"`
 }
 
+// TableName returns the database table name used by GORM.
 func (InventoryHistory) TableName() string {
 	return "inventory_history"
 }
 
+// TableName returns the database table name used by GORM.
 func (Users) TableName() string {
 	return "users"
 }
 
+// TableName returns the database table name used by GORM.
 func (Products) TableName() string {
 	return "products"
 }
 
+// TableName returns the database table name used by GORM.
 func (Robots) TableName() string {
 	return "robots"
 }
 
+// TableName returns the database table name used by GORM.
 func (AiPrediction) TableName() string {
 	return "ai_predictions"
 }

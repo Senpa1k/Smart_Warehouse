@@ -16,11 +16,10 @@ const (
 	robotCtx            = "robotId"
 )
 
-// валидация jwt токенов
+// UserIdentity validates a user token and stores the user ID in the request context.
 func (h *Handler) UserIdentity(c *gin.Context) {
-
 	header := c.GetHeader(authorizationHeader)
-	token := ""
+	var token string
 	if header == "" {
 		token = c.Query("token")
 		if token == "" {
@@ -36,7 +35,7 @@ func (h *Handler) UserIdentity(c *gin.Context) {
 		token = headerParts[1]
 	}
 
-	userID, err := h.services.Authorization.ParseToken(token)
+	userID, err := h.services.ParseToken(token)
 	if err != nil {
 		NewResponseError(c, http.StatusUnauthorized, err.Error())
 		return
@@ -45,7 +44,7 @@ func (h *Handler) UserIdentity(c *gin.Context) {
 	c.Set(userCtx, userID)
 }
 
-// валидация id роботов
+// RobotIdentity validates a robot authorization header and stores its ID.
 func (h *Handler) RobotIdentity(c *gin.Context) {
 	header := c.GetHeader("Authorization")
 	if header == "" {
@@ -59,15 +58,19 @@ func (h *Handler) RobotIdentity(c *gin.Context) {
 		return
 	}
 
-	robotID := strings.Split(headerParts[1], "_")[1]
-	if !h.services.Robot.CheckId(robotID) {
+	_, robotID, ok := strings.Cut(headerParts[1], "_")
+	if !ok || robotID == "" {
+		NewResponseError(c, http.StatusUnauthorized, "invalid robot authorization")
+		return
+	}
+	if !h.services.CheckID(robotID) {
 		NewResponseError(c, http.StatusUnauthorized, fmt.Errorf("robot with id=%s does not exist", robotID).Error())
 		return
 	}
 	c.Set(robotCtx, robotID)
 }
 
-// проверка header у вебсокета
+// WebsocketIdentity checks the headers required for a WebSocket upgrade.
 func (h *Handler) WebsocketIdentity(c *gin.Context) {
 	if c.GetHeader("Connection") != "Upgrade" {
 		NewResponseError(c, http.StatusBadRequest, fmt.Errorf("there is not header Connections").Error())
@@ -84,7 +87,7 @@ func (h *Handler) WebsocketIdentity(c *gin.Context) {
 	}
 }
 
-// Защита от слишком частых запросов
+// RateLimitMiddleware limits requests by client IP and route through Redis.
 func (h *Handler) RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Если Redis не доступен - пропускаем
